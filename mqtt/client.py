@@ -20,7 +20,7 @@ def main(argv):
         for i in range(5000000):
             a = 1
         client.publish(topic_name, payload="trollolol" + str(message_counter), qos=0, retain=False)
-        if (i % 10) == 0:
+        if (message_counter % 10) == 0:
             client.publish(topic_name, payload="send", qos=0, retain=False)
         message_counter += 1
 
