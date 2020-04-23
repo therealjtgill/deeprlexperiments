@@ -5,7 +5,12 @@ def on_message(client, userdata, message):
    msg_data = message.payload.decode()
    print("Received message:", msg_data)
    if msg_data == "send":
-      client.publish("thisismytopic", payload="message sent from broker", qos=0, retain=False)
+      client.publish(
+         "thisismytopic",
+         payload="message sent from broker",
+         qos=0,
+         retain=False
+      )
    return
 
 def main(argv):
