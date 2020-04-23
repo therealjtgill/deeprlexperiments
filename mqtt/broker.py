@@ -2,7 +2,10 @@ import sys
 import paho.mqtt.client as mqtt
 
 def on_message(client, userdata, message):
-   print("Received message:", message.payload.decode())
+   msg_data = message.payload.decode()
+   print("Received message:", msg_data)
+   if msg_data == "send":
+      client.publish("thisismytopic", payload="message sent from broker", qos=0, retain=False)
    return
 
 def main(argv):

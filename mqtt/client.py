@@ -17,9 +17,11 @@ def main(argv):
 
     message_counter = 0
     while(True):
-        for _ in range(5000000):
+        for i in range(5000000):
             a = 1
         client.publish(topic_name, payload="trollolol" + str(message_counter), qos=0, retain=False)
+        if (i % 10) == 0:
+            client.publish(topic_name, payload="send", qos=0, retain=False)
         message_counter += 1
 
     #client.loop_forever()
