@@ -6,7 +6,7 @@ def on_message(client, userdata, message):
    return
 
 def main(argv):
-   broker_url = "192.168.1.4"
+   broker_url = argv[1]
    broker_port = 1883
    client = mqtt.Client()
    client.connect(broker_url, broker_port)
