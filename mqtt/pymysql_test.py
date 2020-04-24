@@ -13,7 +13,7 @@ def main(argv):
       help     = "Username for connection to remote DB.",
       required = True
    )
-   parser.add_argument("-p" "--password",
+   parser.add_argument("-p", "--password",
       help     = "User password",
       required = True
    )
