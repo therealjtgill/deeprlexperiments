@@ -4,6 +4,8 @@ import paho.mqtt.client as mqtt
 import time
 
 def message_handler(client, userdata, message, queue=None):
+   if not message.topic == "manager":
+      return
    decoded_msg = message.payload.decode()
    print("Received message: ", decoded_msg)
    if queue is not None:
@@ -11,17 +13,18 @@ def message_handler(client, userdata, message, queue=None):
    else:
       print("Queue is not defined, worker won't do anything")
 
-def mosquito(name, client, control_q):
+def mosquito(name, client):
    client.loop_forever()
 
-def worker(client, control_q):
+def worker(client, write_topic, control_q):
    while True:
       if not control_q.empty():
          print("Worker process found a new thing to do!")
          new_job = control_q.get()
-         for _ in range(50000):
+         for _ in range(50000000):
             a = 1
          print("Finished the job")
+         client.publish(write_topic, payload="")
 
 def main(argv):
    jobs = []
@@ -40,8 +43,7 @@ def main(argv):
          target=mosquito,
          args=(
             str(i),
-            client,
-            queue_of_things
+            client
          )
       )
       jobs.append(p)
@@ -49,7 +51,7 @@ def main(argv):
    p = multiprocessing.Process(
       target=worker,
       args=(
-         client, queue_of_things
+         client, "worker", queue_of_things
       )
    )
    jobs.append(p)
