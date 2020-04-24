@@ -2,15 +2,16 @@ import paho.mqtt.client as mqtt
 import sys
 
 def message_handler(client, userdata, message):
+    if message.topic is not "worker":
+        return
     print("Received message: ", message.payload.decode())
     client.publish(topic="manager", payload="new_task", qos=0, retain=False)
-    return
 
 def main(argv):
     broker_url = argv[1]
     broker_port = 1883
     client = mqtt.Client()
-    #client.on_message = message_handler
+    client.on_message = message_handler
     client.connect(broker_url, broker_port)
     topic_name = "worker"
     client.subscribe(topic_name, qos=1)

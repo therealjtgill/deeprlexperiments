@@ -24,7 +24,7 @@ def worker(client, write_topic, control_q):
          for _ in range(50000000):
             a = 1
          print("Finished the job")
-         client.publish(write_topic, payload="")
+         client.publish(write_topic, payload="finished")
 
 def main(argv):
    jobs = []
@@ -33,7 +33,6 @@ def main(argv):
    mh = lambda x, y, z: message_handler(x, y, z, queue=queue_of_things)
    client = mqtt.Client()
    client.on_message = mh
-   #client.on_message = message_handler
    client.connect(argv[1], 1883)
    client.subscribe("worker", qos=1)
    client.subscribe("manager", qos=1)
