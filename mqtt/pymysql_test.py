@@ -46,15 +46,18 @@ def main(argv):
    new_table_name = str(datetime.datetime.today()).replace(":", "-").replace(" ", "-")
 
    # Assumes that single states and actions can be taken in this fake environment
-   cursor.execute("create table " + new_table_name + "(time float, state float, action float, reward float)")
+   cursor.execute("create table `" + new_table_name + "`(time float, state float, action float, reward float)")
    cursor.fetchall()
 
    for i in range(100):
       random_stuff = np.random.rand(4, 1)
       cursor.execute(
-         "insert into " + new_table_name + "(time, state, action, reward)" + \
-         "values({} {} {} {}, 1);".format(*random_stuff)
+         "insert into `" + new_table_name + "`(time, state, action, reward)" + \
+         "values({}, {}, {}, {});".format(*random_stuff)
       )
+      cursor.fetchall()
+   # Have to commit so that insertion actually happens.
+   db.commit()
 
 if __name__ == "__main__":
    main(sys.argv)
