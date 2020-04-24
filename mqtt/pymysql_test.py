@@ -50,7 +50,7 @@ def main(argv):
    cursor.fetchall()
 
    for i in range(100):
-      random_stuff = np.random.rand(4, 1)
+      random_stuff = np.random.rand(4)
       cursor.execute(
          "insert into `" + new_table_name + "`(time, state, action, reward)" + \
          "values({}, {}, {}, {});".format(*random_stuff)
