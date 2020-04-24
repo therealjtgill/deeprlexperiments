@@ -8,6 +8,8 @@ def message_handler(client, userdata, message, queue=None):
    print("Received message: ", decoded_msg)
    if queue is not None:
       queue.put(decoded_msg)
+   else:
+      print("Queue is not defined, worker won't do anything")
 
 def mosquito(name, client, control_q):
    client.loop_forever()
@@ -16,7 +18,7 @@ def worker(client, control_q):
    while True:
       if not control_q.empty():
          print("Worker process found a new thing to do!")
-         new_job = q.get()
+         new_job = control_q.get()
          for _ in range(50000):
             a = 1
          print("Finished the job")
@@ -25,8 +27,10 @@ def main(argv):
    jobs = []
    queue_of_things = multiprocessing.SimpleQueue()
 
+   mh = lambda x, y, z: message_handler(x, y, z, queue=queue_of_things)
    client = mqtt.Client()
-   client.on_message = message_handler
+   client.on_message = mh
+   #client.on_message = message_handler
    client.connect(argv[1], 1883)
    client.subscribe("worker", qos=1)
    client.subscribe("manager", qos=1)
@@ -41,7 +45,6 @@ def main(argv):
          )
       )
       jobs.append(p)
-      p.start()
 
    p = multiprocessing.Process(
       target=worker,
@@ -49,6 +52,10 @@ def main(argv):
          client, queue_of_things
       )
    )
+   jobs.append(p)
+
+   for j in jobs:
+      j.start()
 
 if __name__ == "__main__":
    main(sys.argv)
