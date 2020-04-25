@@ -13,7 +13,7 @@ def message_handler(client, userdata, message, queue=None):
    else:
       print("Queue is not defined, worker won't do anything")
 
-def mosquito(name, client):
+def mosquito(client):
    client.loop_forever()
 
 def worker(client, write_topic, control_q):
@@ -41,7 +41,6 @@ def main(argv):
       p = multiprocessing.Process(
          target=mosquito,
          args=(
-            str(i),
             client
          )
       )
