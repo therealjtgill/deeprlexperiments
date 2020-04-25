@@ -1,2 +1,4 @@
 .ipynb_checkpoints
 checkpoints
+*media*
+*__pycache__*
