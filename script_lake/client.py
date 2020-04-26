@@ -1,3 +1,4 @@
+from client_work_def import ClientWorkDef
 import json
 import multiprocessing
 import paho.mqtt.client as mqtt
@@ -67,23 +68,27 @@ def mqtt_process(worker_client):
 
 def work_process(work_queue, worker_client):
    print("Started work process")
-   current_work = None
+   current_work = ClientWorkDef(worker_client.config)
+   worker_uid = worker_client.config.worker_uid
    while True:
       if not work_queue.empty():
          new_work_json = work_queue.get()
          new_work = json.loads(new_work_json, object_hook=utils.named_thing)
-         if worker_client.config.worker_uid in new_work.worker_uids:
+         if worker_uid in new_work.worker_uids:
             print("Doing work:\n", new_work_json)
-            time.sleep(2)
+            
+            # Response is being faked right now.
             response = {
                "worker_uid": str(worker_client.worker_uid),
                "random_str": str(time.time()),
                "task_uid": str(new_work.task_uid)
             }
             worker_client.publish(json.dumps(response))
+
          else:
+            print("Worker UID", worker_uid, "not mentioned in current work.")
             worker_client.publish(json.dumps(worker_client.config))
-      time.sleep(1)
+      
       print("looping work")
 
 def spinup_worker(worker_config):
@@ -128,7 +133,11 @@ def main(argv):
             "action": "register"
          }
       ],
-      "worker_uid": 1
+      "worker_uid": 1,
+      "sql_hostname": "192.168.1.4",
+      "sql_username": "worker",
+      "sql_key_loc": "sqlkey.txt",
+      "sql_dbname": "XPDB"
    }
 
    test_config_json = json.dumps(test_config_dict)

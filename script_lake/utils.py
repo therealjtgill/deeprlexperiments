@@ -39,6 +39,27 @@ class logger(object):
    def __call__(self, args):
       self.printer(args)
 
+def decrypt_ciphertext(filename):
+   from cryptography.fernet import Fernet
+   lines = []
+
+   try:
+      with open(filename, "r") as f:
+         lines = f.readlines()
+   except Exception as e:
+      print("Could not open file", filename, "for unciphering.")
+      return "filenotfound"
+
+   key_line = [l for l in lines if "key" in l][0]
+   key = str.encode(key_line.split("key ")[-1])
+
+   cipher_line = [l for l in lines if "cipher" in l][0]
+   cipher = str.encode(cipher_line.split("cipher ")[-1])
+
+   cipher_suite = Fernet(key)
+   unciphered_text = (cipher_suite.decrypt(cipher))
+   return unciphered_text
+
 if __name__ == "__main__":
    test_config_dict = {
       "broker_url": "192.168.1.4",

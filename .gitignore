@@ -2,3 +2,4 @@
 checkpoints
 *media*
 *__pycache__*
+*sqlkey*

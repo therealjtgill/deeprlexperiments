@@ -61,9 +61,14 @@ def count_unique_things(counts, next_thing):
    return counts
 
 def manager_process(manager_client, worker_msg_queue, reg_queue):
+   # UIDs of workers in the current active work session.
    current_workers = manager_client.config.worker_uids
+   # UIDs of workers to include in the next work session.
    next_workers    = manager_client.config.worker_uids
+   # Parameters of work that has been completed, one for each worker.
    completed_work  = []
+   # UIDs of workers who have completed work.
+   completed_workers = []
 
    while True:
       
@@ -109,11 +114,11 @@ def manager_process(manager_client, worker_msg_queue, reg_queue):
             )
          )
 
-      # trainer_config = {
-      #    "worker_uids": next_workers,
-      #    "data": [c.data_location for c in completed_workers],
-      #    "network_uid": "stuffnthings"
-      # }
+      trainer_config = {
+         "worker_uids": next_workers,
+         "data": [c.data_location for c in completed_workers],
+         "network_uid": "stuffnthings"
+      }
 
 def mqtt_process(manager_client):
    print("Started mqtt process")
@@ -122,7 +127,9 @@ def mqtt_process(manager_client):
 # Maybe the environment will be part of the model?
 # Need to specify how SAR data is saved in trainer function arguments.
 def trainer_process(manager_client, model, environment):
-   return False
+   while True:
+      # Do stuff heeeeeere, call server_work_def
+      pass
 
 def spinup_server(manager_config):
    reg_queue          = multiprocessing.SimpleQueue()
