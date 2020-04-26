@@ -2,10 +2,10 @@ import paho.mqtt.client as mqtt
 import sys
 
 def message_handler(client, userdata, message):
-    if message.topic is not "worker":
+    if message.topic is not "manager":
         return
     print("Received message: ", message.payload.decode())
-    client.publish(topic="manager", payload="new_task", qos=0, retain=False)
+    client.publish(topic="worker", payload="new_task", qos=0, retain=False)
 
 def main(argv):
     broker_url = argv[1]
@@ -16,7 +16,7 @@ def main(argv):
     topic_name = "worker"
     client.subscribe(topic_name, qos=1)
     client.subscribe("manager", qos=1)
-    client.publish(topic="manager", payload="fuckshitpiss", qos=0, retain=False)
+    client.publish(topic=topic_name, payload="fuckshitpiss", qos=0, retain=False)
 
     client.loop_forever()
 
