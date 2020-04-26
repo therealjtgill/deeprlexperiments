@@ -42,7 +42,6 @@ class Client(object):
             decoded_message = message.payload.decode("utf-8")
             print("\nreceived message", decoded_message, message.topic)
             print(str(message.topic), self.listen_topic)
-            print("object on_message", self.queue.empty(), self.queue)
             self.queue.put(decoded_message)
             self.client.publish(
                 topic=self.publish_topic,
@@ -68,10 +67,8 @@ def work_process(work_queue, worker_client):
     print("Started work process")
     current_work = None
     while True:
-        print(work_queue.empty(), work_queue)
         if not work_queue.empty():
             new_work_json = work_queue.get()
-            print(type(new_work_json), new_work_json)
             new_work = json.loads(new_work_json, object_hook=utils.named_thing)
             print("Doing work:\n", new_work_json)
             time.sleep(2)
