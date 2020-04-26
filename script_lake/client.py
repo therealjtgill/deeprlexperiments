@@ -84,8 +84,8 @@ def work_process(work_queue, worker_client):
         time.sleep(1)
         print("looping work")
 
-def spinup_worker(worker_config, work_queue):
-    
+def spinup_worker(worker_config):
+    work_queue = multiprocessing.SimpleQueue()
     worker_mqtt = Client(worker_config, work_queue)
 
     p1 = multiprocessing.Process(
@@ -138,8 +138,8 @@ def main(argv):
     # )
 
     # client_obj.run_de_loop()
-    work_queue = multiprocessing.SimpleQueue()
-    spinup_worker(test_config, work_queue)
+    
+    spinup_worker(test_config)
     print("exiting main loop")
 
 if __name__ == "__main__":
