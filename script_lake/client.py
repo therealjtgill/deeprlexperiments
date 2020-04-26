@@ -1,9 +1,9 @@
-import utils
 import json
 import multiprocessing
 import paho.mqtt.client as mqtt
 import sys
 import time
+import utils
 
 class Client(object):
     def __init__(self, client_config, client_queue, debug=False):
@@ -39,7 +39,11 @@ class Client(object):
 
     def on_message(self, client, userdata, message):
         if str(message.topic) == str(self.listen_topic):
-            self.queue.put(message)
+            decoded_message = message.payload.decode("utf-8")
+            print("\nreceived message", decoded_message, message.topic)
+            print(str(message.topic), self.listen_topic)
+            print("object on_message", self.queue.empty(), self.queue)
+            self.queue.put(decoded_message)
             self.client.publish(
                 topic=self.publish_topic,
                 payload="send"
@@ -57,14 +61,18 @@ class Client(object):
 def mqtt_process(worker_client):
     print("Started mqtt process")
     worker_client.run_de_loop()
+    while True:
+        time.sleep(1)
 
 def work_process(work_queue, worker_client):
     print("Started work process")
     current_work = None
     while True:
+        print(work_queue.empty(), work_queue)
         if not work_queue.empty():
             new_work_json = work_queue.get()
-            new_work = json.loads(new_work, object_hook=utils.named_thing)
+            print(type(new_work_json), new_work_json)
+            new_work = json.loads(new_work_json, object_hook=utils.named_thing)
             print("Doing work:\n", new_work_json)
             time.sleep(2)
             response = {
@@ -73,15 +81,11 @@ def work_process(work_queue, worker_client):
                 "task_uid": str(new_work.task_uid) # lul
             }
             worker_client.publish(json.dumps(response))
+        time.sleep(1)
+        print("looping work")
 
-def spinup_worker(worker_config):
-    work_queue = multiprocessing.SimpleQueue()
-
-    # worker_config = json.load(
-    #     open(config_filename, "r"),
-    #     object_hook=utils.named_thing
-    # )
-
+def spinup_worker(worker_config, work_queue):
+    
     worker_mqtt = Client(worker_config, work_queue)
 
     p1 = multiprocessing.Process(
@@ -134,8 +138,9 @@ def main(argv):
     # )
 
     # client_obj.run_de_loop()
-
-    spinup_worker(test_config)
+    work_queue = multiprocessing.SimpleQueue()
+    spinup_worker(test_config, work_queue)
+    print("exiting main loop")
 
 if __name__ == "__main__":
     main(sys.argv)
