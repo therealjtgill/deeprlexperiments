@@ -78,7 +78,7 @@ def work_process(work_queue, worker_client):
             response = {
                "worker_uid": str(worker_client.worker_uid),
                "random_str": str(time.time()),
-               "task_uid": str(new_work.task_uid) # lul
+               "task_uid": str(new_work.task_uid)
             }
             worker_client.publish(json.dumps(response))
          else:
