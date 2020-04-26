@@ -8,7 +8,8 @@ class named_thing(object):
       return self.__repr__()
 
    def __repr__(self):
-      return "\n".join(str(k) + ": " + str(v) for k, v in self.__dict__.items())
+      # This makes the class perfectly parsable by the JSON package.
+      return str(self.__dict__).replace("\'", "\"")
 
 class logger(object):
    def __init__(self, my_name, out_filename=None, parent=None):
