@@ -11,7 +11,8 @@ def on_message(client, userdata, message):
    time.sleep(2)
    stuff_to_do = {
       "task_uid": 10,
-      "time": time.time()
+      "time": time.time(),
+      "worker_uids": [1]
    }
 
    print("Stuff to do:", stuff_to_do)
@@ -35,7 +36,8 @@ def main(argv):
 
    stuff_to_do = {
       "task_uid": 10,
-      "time": time.time()
+      "time": time.time(),
+      "worker_uids": [1]
    }
    client.publish("manager", json.dumps(stuff_to_do))
 
