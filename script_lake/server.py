@@ -9,9 +9,7 @@ import utils
 class Server(object):
    def __init__(self, client_config, client_queues, debug=False):
       self.config = client_config
-      self.queues = utils.named_thing(client_queue)
-
-      self.worker_uid = client_config.worker_uid
+      self.queues = utils.named_thing(client_queues)
 
       self.client = mqtt.Client()
       self.client.on_message = self.on_message
@@ -25,7 +23,7 @@ class Server(object):
       self.listen_topics = [
          e.name for e in self.config.topics if e.action == "listen"
       ]
-
+      print("listen topics:", self.listen_topics)
       self.publish_topic = [
          e.name for e in self.config.topics if e.action == "publish"
       ][0]
@@ -34,6 +32,7 @@ class Server(object):
       print("\nPublishing connection message")
 
    def on_message(self, client, userdata, message):
+      print("Server received a message:", message.topic, message.payload)
       if str(message.topic) not in self.listen_topics:
          return
 
@@ -69,9 +68,18 @@ def manager_process(manager_client, worker_msg_queue, reg_queue):
    while True:
       
       while not worker_msg_queue.empty():
-         completed_work.append(
-            json.loads(worker_msg_queue.get(), object_hook=utils.named_thing)
-         )
+         try:
+            worker_str = worker_msg_queue.get()
+            worker_data = json.loads(
+               worker_str, object_hook=utils.named_thing
+            )
+            completed_work.append(
+               worker_data
+            )
+         except Exception as e:
+            print("Couldn't decode string, might not be JSON.")
+            print(worker_str)
+            print("Error:", str(e))
       
       new_data_available = False
       if len(completed_work) > 0:
@@ -91,6 +99,7 @@ def manager_process(manager_client, worker_msg_queue, reg_queue):
          new_workers.append(
             json.loads(reg_queue.get(), object_hook=utils.named_thing)
          )
+         print("Found a new worker:", new_workers[-1])
          time.sleep(2)
 
       if len(new_workers) > 0:
@@ -100,11 +109,11 @@ def manager_process(manager_client, worker_msg_queue, reg_queue):
             )
          )
 
-      trainer_config = {
-         "worker_uids": next_workers,
-         "data": [c.data_location for c in completed_workers],
-         "network_uid": 
-      }
+      # trainer_config = {
+      #    "worker_uids": next_workers,
+      #    "data": [c.data_location for c in completed_workers],
+      #    "network_uid": "stuffnthings"
+      # }
 
 def mqtt_process(manager_client):
    print("Started mqtt process")
@@ -113,22 +122,26 @@ def mqtt_process(manager_client):
 # Maybe the environment will be part of the model?
 # Need to specify how SAR data is saved in trainer function arguments.
 def trainer_process(manager_client, model, environment):
-
-   while True:
-      pass
+   return False
 
 def spinup_server(manager_config):
    reg_queue          = multiprocessing.SimpleQueue()
    worker_msg_queue   = multiprocessing.SimpleQueue()
    trainer_queue      = multiprocessing.SimpleQueue()
 
-   manager_client = Server(manager_config)
-   jobs = []
+   manager_client = Server(
+      manager_config,
+      {
+         "register": reg_queue,
+         "worker": worker_msg_queue,
+         "trainer": trainer_queue
+      }
+   )
 
    p1 = multiprocessing.Process(
       target=mqtt_process,
       args=(
-         manager_client
+         manager_client,
       )
    )
 
@@ -142,17 +155,42 @@ def spinup_server(manager_config):
    p3 = multiprocessing.Process(
       target=trainer_process,
       args=(
-         manager_client, model, environment
+         # manager_client, model, environment
+         manager_client, None, None
       )
    )
+
+   jobs = [p1, p2, p3]
+   for j in jobs:
+      j.start()
 
 def main(argv):
    test_config_dict = {
      "worker_uids": [],
      "num_rollouts": 50,
      "database_name": "XPDB",
-     "ftp": "None"
+     "ftp": "None",
+     "broker_url": "192.168.1.4",
+     "broker_port": 1883,
+     "topics": [
+         {
+            "name": "manager",
+            "action": "publish"
+         },
+         {
+            "name": "worker",
+            "action": "listen"
+         },
+         {
+            "name": "register",
+            "action": "listen"
+         }
+     ]
    }
+
+   test_config_json = json.dumps(test_config_dict)
+   test_config = json.loads(test_config_json, object_hook=utils.named_thing)
+   spinup_server(test_config)
 
 if __name__ == "__main__":
    main(sys.argv)
