@@ -1,3 +1,4 @@
+import datetime
 import json
 
 class named_thing(object):
@@ -38,6 +39,9 @@ class logger(object):
 
    def __call__(self, args):
       self.printer(args)
+
+def today_string():
+   str(datetime.datetime.today()).replace(":", "-").replace(" ", "-")
 
 def decrypt_ciphertext(filename):
    from cryptography.fernet import Fernet

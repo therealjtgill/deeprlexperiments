@@ -60,7 +60,7 @@ def count_unique_things(counts, next_thing):
       counts[next_thing] = 1
    return counts
 
-def manager_process(manager_client, worker_msg_queue, reg_queue):
+def manager_process(manager_client, worker_msg_queue, reg_queue, trainer_queue):
    # UIDs of workers in the current active work session.
    current_workers = manager_client.config.worker_uids
    # UIDs of workers to include in the next work session.
@@ -69,9 +69,8 @@ def manager_process(manager_client, worker_msg_queue, reg_queue):
    completed_work  = []
    # UIDs of workers who have completed work.
    completed_workers = []
-
+   session_uids = []
    while True:
-      
       while not worker_msg_queue.empty():
          try:
             worker_str = worker_msg_queue.get()
@@ -114,11 +113,14 @@ def manager_process(manager_client, worker_msg_queue, reg_queue):
             )
          )
 
-      trainer_config = {
-         "worker_uids": next_workers,
-         "data": [c.data_location for c in completed_workers],
-         "network_uid": "stuffnthings"
-      }
+      if len(next_workers) > 0:
+         trainer_config = {
+            "worker_uids": next_workers,
+            "data": [c.data_location for c in completed_workers],
+            "network_uid": session_uids[0]
+         }
+
+         trainer_queue.put(json.dumps(trainer_config))
 
 def mqtt_process(manager_client):
    print("Started mqtt process")
@@ -132,7 +134,10 @@ def trainer_process(manager_client, trainer_queue, model, environment):
       # Do stuff heeeeeere, call server_work_def
       if not trainer_queue.empty():
          train_config = trainer_queue.get()
-
+      
+      if train_config is not None:
+         # Run server work definition...
+         pass
 
 def spinup_server(manager_config):
    reg_queue          = multiprocessing.SimpleQueue()
@@ -158,7 +163,7 @@ def spinup_server(manager_config):
    p2 = multiprocessing.Process(
       target=manager_process,
       args=(
-         manager_client, worker_msg_queue, reg_queue
+         manager_client, worker_msg_queue, reg_queue, trainer_queue
       )
    )
 

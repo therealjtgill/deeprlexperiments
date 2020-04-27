@@ -34,9 +34,10 @@ class ClientWorkDef(object):
          print("work def has nothing to do, so... inserting random data in the table.")
          random_data = np.random.rand(100, 4)
          field_placeholders = ", ".join(["{}",]*random_data.shape[1])
-         column_names = ", ".join(
-            ["col_" + str(i) for i in range(random_data.shape[1])]
-         )
+         #column_names = ", ".join(
+         #   ["col_" + str(i) for i in range(random_data.shape[1])]
+         #)
+         column_names = ["time", "state", "action", "reward"]
          for i in range(random_data.shape[0]):
             random_stuff = random_data[i, :]
             self.cursor.execute(
