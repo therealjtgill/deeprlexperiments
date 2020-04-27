@@ -115,6 +115,8 @@ def manager_process(manager_client, worker_msg_queue, reg_queue, trainer_queue):
          )
 
       if len(next_workers) > 0:
+         if session_uids is None:
+            session_uids = [utils.today_string]
          trainer_config = {
             "worker_uids": next_workers,
             "data": [c.data_location for c in completed_workers],

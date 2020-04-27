@@ -88,7 +88,7 @@ def work_process(work_queue, worker_client):
          else:
             print("Worker UID", worker_uid, "not mentioned in current work.")
             worker_client.publish(json.dumps(worker_client.config))
-      
+      time.sleep(2)
       print("looping work")
 
 def spinup_worker(worker_config):
