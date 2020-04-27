@@ -17,6 +17,10 @@ select user, db, host from mysql.db;
 # Change a user's username
 alter user 'username'@'hostname' identified by 'newpassword';
 
+# Change a user's permissions
+grant [all privileges, create, drop, delete, insert, select, update, grant option] on db_name.table_name to 'username'@'hostname';
+flush privileges;
+
 # Add a new user
 create user 'username'@'hostname' identified by 'newpassword';
 

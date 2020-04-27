@@ -126,10 +126,13 @@ def mqtt_process(manager_client):
 
 # Maybe the environment will be part of the model?
 # Need to specify how SAR data is saved in trainer function arguments.
-def trainer_process(manager_client, model, environment):
+def trainer_process(manager_client, trainer_queue, model, environment):
+   train_config = None
    while True:
       # Do stuff heeeeeere, call server_work_def
-      pass
+      if not trainer_queue.empty():
+         train_config = trainer_queue.get()
+
 
 def spinup_server(manager_config):
    reg_queue          = multiprocessing.SimpleQueue()
@@ -163,7 +166,7 @@ def spinup_server(manager_config):
       target=trainer_process,
       args=(
          # manager_client, model, environment
-         manager_client, None, None
+         manager_client, trainer_queue, None, None
       )
    )
 
@@ -192,7 +195,11 @@ def main(argv):
             "name": "register",
             "action": "listen"
          }
-     ]
+     ],
+     "sql_hostname": "192.168.1.4",
+     "sql_username": "manager",
+     "sql_key_loc": "sqlkey.txt",
+     "sql_dbname": "XPDB"
    }
 
    test_config_json = json.dumps(test_config_dict)
