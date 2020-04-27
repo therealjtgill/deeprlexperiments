@@ -28,7 +28,7 @@ class ServerWorkDef(object):
          print("Couldn't connect to remote SQL database.", str(e))
          sys.exit(-1)
 
-   def do_work(dynamic_work_params):
+   def do_work(self, dynamic_work_params):
       output_params = None
       if self.work_stuff is None:
          new_table_name_base = utils.today_string()

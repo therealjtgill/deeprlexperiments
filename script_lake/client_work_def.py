@@ -28,7 +28,7 @@ class ClientWorkDef(object):
          print("Couldn't connect to remote SQL database.", str(e))
          sys.exit(-1)
 
-   def do_work(dynamic_work_params):
+   def do_work(self, dynamic_work_params):
       if self.work_stuff is None:
          output_table_name = dynamic_work_params.output_table_name
          print("work def has nothing to do, so... inserting random data in the table.")

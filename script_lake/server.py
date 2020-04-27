@@ -120,7 +120,7 @@ def manager_process(manager_client, worker_msg_queue, reg_queue, trainer_queue):
          trainer_config = {
             "worker_uids": next_workers,
             "data": [c.data_location for c in completed_workers],
-            "network_uid": session_uids[0]
+            #"network_uid": session_uids[0]
          }
 
          trainer_queue.put(json.dumps(trainer_config))
@@ -140,8 +140,12 @@ def trainer_process(manager_client, trainer_queue, model, environment):
          train_config = trainer_queue.get()
       
       if train_config is not None:
+         print("Starting work definition with this training config:")
+         print(train_config)
          # Run server work definition...
-         pass
+         current_work.do_work(train_config)
+
+      time.sleep(2)
 
 def spinup_server(manager_config):
    reg_queue          = multiprocessing.SimpleQueue()
