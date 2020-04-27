@@ -4,7 +4,7 @@ import sys
 import time
 import utils
 
-class ClientWorkDef(object):
+class ServerWorkDef(object):
    def __init__(self, static_work_params, work_stuff=None):
       self.config = static_work_params
       self.work_stuff = work_stuff

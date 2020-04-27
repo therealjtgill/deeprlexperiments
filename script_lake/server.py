@@ -2,6 +2,7 @@ from functools import reduce
 import json
 import multiprocessing
 import paho.mqtt.client as mqtt
+from server_work_def import ServerWorkDef
 import sys
 import time
 import utils
@@ -130,6 +131,7 @@ def mqtt_process(manager_client):
 # Need to specify how SAR data is saved in trainer function arguments.
 def trainer_process(manager_client, trainer_queue, model, environment):
    train_config = None
+   current_work = ServerWorkDef(manager_client.config)
    while True:
       # Do stuff heeeeeere, call server_work_def
       if not trainer_queue.empty():
