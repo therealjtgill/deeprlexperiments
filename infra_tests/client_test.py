@@ -20,10 +20,17 @@ def main(argv):
     client = mqtt.Client()
     client.on_message = message_handler
     client.connect(broker_url, broker_port)
-    topic_name = "worker"
+    topic_name = "manager"
     client.subscribe(topic_name, qos=1)
     client.subscribe("manager", qos=1)
     client.publish(topic=topic_name, payload="fuckshitpiss", qos=0, retain=False)
+    sample_dict = {
+        "key1": "val1",
+        "key2": "val2",
+        "key3": ["l1", "l2", "l3"]
+    }
+    #client.publish(topic="worker", payload="new_task", qos=0, retain=False)
+    client.publish(topic="worker", payload=json.dumps(sample_dict), qos=0, retain=False)
 
     client.loop_forever()
 
