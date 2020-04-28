@@ -41,7 +41,7 @@ class logger(object):
       self.printer(args)
 
 def today_string():
-   str(datetime.datetime.today()).replace(":", "-").replace(" ", "-")
+   return str(datetime.datetime.today()).replace(":", "-").replace(" ", "-")
 
 def decrypt_ciphertext(filename):
    from cryptography.fernet import Fernet

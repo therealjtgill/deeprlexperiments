@@ -13,6 +13,7 @@ class ServerWorkDef(object):
 
       self.db = None
       self.cursor = None
+      self.session_uid = 1
       try:
          self.db = pymysql.connect(
             self.config.sql_hostname,
@@ -33,17 +34,30 @@ class ServerWorkDef(object):
       if self.work_stuff is None:
          new_table_name_base = utils.today_string()
          new_table_names = []
-         print("work def has nothing to do, so... making a new tables with base name", utils.today_string())
+         print("work def has nothing to do, so... making a new tables with base name", new_table_name_base)
          for w_uid in dynamic_work_params.worker_uids:
-            new_table_name = new_table_name + "_" + str(w_uid)
-            cursor.execute(
-               "create table `" + new_table_name + "`" + \
-               "(time float, state float, action float, reward float)"
-            )
-            cursor.fetchall()
-            new_table_names.append(new_table_name)
-         output_params = {
-            "new_table_names": new_table_names,
-         }
+            new_table_name = new_table_name_base + "_" + str(w_uid)
+            try:
+               self.cursor.execute(
+                  "create table `" + new_table_name + "`" + \
+                  "(time float, state float, action float, reward float)"
+               )
+               self.cursor.fetchall()
+               new_table_names.append(new_table_name)
+            except Exception as e:
+               print("Error occurred trying to make a new table for the workers.")
+               print(str(e))
+
+         if len(new_table_names) > 0:
+            output_params = {
+               "new_table_names": new_table_names,
+               "session_uid": "%010d" % self.session_uid
+            }
+
       else:
          ret_vals = self.work_stuff.do_work(dynamic_work_params)
+         output_params = {
+
+         }
+
+      return output_params

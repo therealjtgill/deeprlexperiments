@@ -33,11 +33,11 @@ class Server(object):
       print("\nPublishing connection message")
 
    def on_message(self, client, userdata, message):
-      print("Server received a message:", message.topic, message.payload)
+      #print("Server received a message:", message.topic, message.payload)
       if str(message.topic) not in self.listen_topics:
          return
 
-      decoded_message = message.payload.decode("utf-8")
+      decoded_message = str(message.payload.decode("utf-8", "ignore"))
       print("\nReceived message", decoded_message, message.topic)
 
       if str(message.topic) == "register":
@@ -63,18 +63,20 @@ def count_unique_things(counts, next_thing):
 
 def manager_process(manager_client, worker_msg_queue, reg_queue, trainer_queue):
    # UIDs of workers in the current active work session.
-   current_workers = manager_client.config.worker_uids
-   # UIDs of workers to include in the next work session.
-   next_workers    = manager_client.config.worker_uids
+   current_worker_uids   = manager_client.config.worker_uids
+   # Full configs of workers to include in the next work session.
+   next_worker_uids      = []
    # Parameters of work that has been completed, one for each worker.
-   completed_work  = []
+   completed_work        = []
    # UIDs of workers who have completed work.
-   completed_workers = []
-   session_uids = []
+   completed_worker_uids = []
+   session_uids          = []
+
+   current_work_completed = False
    while True:
       while not worker_msg_queue.empty():
          try:
-            worker_str = worker_msg_queue.get()
+            worker_str = worker_msg_queue.get().replace("\\", "")[1:-1]
             worker_data = json.loads(
                worker_str, object_hook=utils.named_thing
             )
@@ -94,39 +96,63 @@ def manager_process(manager_client, worker_msg_queue, reg_queue, trainer_queue):
          # Need to verify that all of the current work falls under the same
          # session UID.
          #do some stuff here...
-         completed_workers = [c.worker_uid for c in completed_work]
-         if set(completed_workers) == set(current_workers):
-            print("All workers in", current_workers, "have finished.")
+         completed_worker_uids = [c.worker_uid for c in completed_work]
+         if set(completed_worker_uids) == set(current_worker_uids):
+            print("All workers in", completed_worker_uids, "have finished.")
             new_data_available = True
 
       new_workers = []
       while not reg_queue.empty():
-         new_workers.append(
-            json.loads(reg_queue.get(), object_hook=utils.named_thing)
-         )
-         print("Found a new worker:", new_workers[-1])
+         new_worker_config = None
+         try:
+            new_worker_config_json = reg_queue.get().replace("\\", "")[1:-1]
+            new_worker_config = json.loads(
+               new_worker_config_json,
+               object_hook=utils.named_thing
+            )
+            print("json type:", type(new_worker_config_json), "\n", new_worker_config_json)
+            print(type(json.loads(new_worker_config_json)))
+
+         except Exception as e:
+            print("Couldn't decode string into JSON format.")
+            print(new_worker_config_json)
+            print(str(e))
+
+         print("\nFound a new worker:", new_worker_config, "\nwith type:\n", type(new_worker_config))
+         
+         if new_worker_config is not None:
+            new_workers.append(
+               new_worker_config
+            )
          time.sleep(2)
 
       if len(new_workers) > 0:
-         next_workers = list(
+         print("\nThe entire thing of new workers:\n", new_workers)
+         print("type of the element in the new workers list is:\n", type(new_workers[0]))
+         new_worker_uids = [w.worker_uid for w in new_workers]
+         next_worker_uids = list(
             set(
-               current_workers + new_workers
+               current_worker_uids + new_worker_uids
             )
          )
+         new_workers = []
 
-      if len(next_workers) > 0:
+      if len(next_worker_uids) > 0:
+         #next_worker_uids = [w.worker_uid for w in next_workers]
          if session_uids is None:
             session_uids = [utils.today_string]
-         trainer_config = {
-            "worker_uids": next_workers,
-            "data": [c.data_location for c in completed_workers],
+         trainer_config_dict = {
+            "worker_uids": next_worker_uids,
+            "data": [c.data_location for c in completed_worker_uids],
             #"network_uid": session_uids[0]
          }
 
-         trainer_queue.put(json.dumps(trainer_config))
+         trainer_config_str = json.dumps(trainer_config_dict)
+         trainer_config = json.loads(trainer_config_str, object_hook=utils.named_thing)
+         trainer_queue.put(trainer_config)
 
 def mqtt_process(manager_client):
-   print("Started mqtt process")
+   print("Started mqtt process") 
    manager_client.run_de_loop()
 
 # Maybe the environment will be part of the model?
@@ -134,16 +160,21 @@ def mqtt_process(manager_client):
 def trainer_process(manager_client, trainer_queue, model, environment):
    train_config = None
    current_work = ServerWorkDef(manager_client.config)
+   work_output  = None
    while True:
-      # Do stuff heeeeeere, call server_work_def
       if not trainer_queue.empty():
          train_config = trainer_queue.get()
       
       if train_config is not None:
          print("Starting work definition with this training config:")
          print(train_config)
-         # Run server work definition...
-         current_work.do_work(train_config)
+         # Run server work definition on received data.
+         work_output = current_work.do_work(train_config)
+      
+      # Only publish the output of the work if the work def returns something.
+      if work_output is not None:
+         manager_client.publish(json.dumps(work_output))
+         work_output = None
 
       time.sleep(2)
 
@@ -216,6 +247,8 @@ def main(argv):
    }
 
    test_config_json = json.dumps(test_config_dict)
+
+   print("test_config_json:\n", test_config_json)
    test_config = json.loads(test_config_json, object_hook=utils.named_thing)
    spinup_server(test_config)
 

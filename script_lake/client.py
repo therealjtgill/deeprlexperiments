@@ -34,6 +34,14 @@ class Client(object):
          e.name for e in self.config.topics if e.action == "publish"
       ][0]
 
+      registration_info_dict = {
+         "worker_uid": self.config.worker_uid
+      }
+      registration_info_json = json.dumps(registration_info_dict)
+      self.registration_info = json.loads(
+         registration_info_json, object_hook=utils.named_thing
+      )
+
    def on_connect(self, client, userdata, flags, rc):
       print("\nPublishing connection message")
       client.publish(
@@ -48,10 +56,6 @@ class Client(object):
          decoded_message = message.payload.decode("utf-8")
          print("\nReceived message", decoded_message, message.topic)
          self.queue.put(decoded_message)
-         self.client.publish(
-            topic=self.publish_topic,
-            payload="send"
-         )
 
    def publish(self, message):
       self.client.publish(
@@ -81,7 +85,7 @@ def work_process(work_queue, worker_client):
             response = {
                "worker_uid": str(worker_client.worker_uid),
                "random_str": str(time.time()),
-               "task_uid": str(new_work.task_uid)
+               "session_uid": str(new_work.session_uid)
             }
             worker_client.publish(json.dumps(response))
 
