@@ -1,3 +1,4 @@
+import json
 import paho.mqtt.client as mqtt
 import sys
 
@@ -5,7 +6,13 @@ def message_handler(client, userdata, message):
     if message.topic is not "manager":
         return
     print("Received message: ", message.payload.decode())
-    client.publish(topic="worker", payload="new_task", qos=0, retain=False)
+    sample_dict = {
+        "key1": "val1",
+        "key2": "val2",
+        "key3": ["l1", "l2", "l3"]
+    }
+    #client.publish(topic="worker", payload="new_task", qos=0, retain=False)
+    client.publish(topic="worker", payload=json.dumps(sample_dict), qos=0, retain=False)
 
 def main(argv):
     broker_url = argv[1]

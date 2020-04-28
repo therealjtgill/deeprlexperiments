@@ -1,9 +1,11 @@
+import json
 import sys
 import paho.mqtt.client as mqtt
 
 def on_message(client, userdata, message):
    msg_data = message.payload.decode()
    print("Received message:", msg_data)
+   print("Type of data when decoded", json.loads(msg_data))
    if msg_data == "send":
       client.publish(
          "thisismytopic",
