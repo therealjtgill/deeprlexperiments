@@ -1,6 +1,11 @@
 import datetime
 import json
 
+def to_named_thing(input_data):
+   input_data_str = json.dumps(input_data)
+   output_data = json.loads(input_data_str, object_hook=named_thing)
+   return output_data
+
 class named_thing(object):
    def __init__(self, args):
       self.__dict__.update(args)
@@ -10,7 +15,7 @@ class named_thing(object):
 
    def __repr__(self):
       # This makes the class perfectly parsable by the JSON package.
-      return str(self.__dict__).replace("\'", "\"")
+      return str(self.__dict__)
 
 class logger(object):
    def __init__(self, my_name, out_filename=None, parent=None):

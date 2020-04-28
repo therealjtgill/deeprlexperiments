@@ -37,10 +37,11 @@ class Client(object):
       registration_info_dict = {
          "worker_uid": self.config.worker_uid
       }
-      registration_info_json = json.dumps(registration_info_dict)
-      self.registration_info = json.loads(
-         registration_info_json, object_hook=utils.named_thing
-      )
+      # registration_info_json = json.dumps(registration_info_dict)
+      # self.registration_info = json.loads(
+      #    registration_info_json, object_hook=utils.named_thing
+      # )
+      registration_info = utils.to_named_thing(registration_info_dict)
 
    def on_connect(self, client, userdata, flags, rc):
       print("\nPublishing connection message")
@@ -76,7 +77,7 @@ def work_process(work_queue, worker_client):
    worker_uid = worker_client.config.worker_uid
    while True:
       if not work_queue.empty():
-         new_work_json = work_queue.get()
+         new_work_json = work_queue.get().replace("\\", "")[1:-1]
          new_work = json.loads(new_work_json, object_hook=utils.named_thing)
          if worker_uid in new_work.worker_uids:
             print("Doing work:\n", new_work_json)
@@ -144,14 +145,15 @@ def main(argv):
       "sql_dbname": "XPDB"
    }
 
-   test_config_json = json.dumps(test_config_dict)
+   # test_config_json = json.dumps(test_config_dict)
 
-   test_config = json.loads(
-      test_config_json,
-      object_hook=utils.named_thing
-   )
+   # test_config = json.loads(
+   #    test_config_json,
+   #    object_hook=utils.named_thing
+   # )
+   utils.to_named_thing(test_config_dict)
 
-   print(json.loads(str(test_config)))
+   #print(json.loads(str(test_config)))
 
    spinup_worker(test_config)
    print("exiting main loop")

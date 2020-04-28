@@ -61,6 +61,16 @@ def count_unique_things(counts, next_thing):
       counts[next_thing] = 1
    return counts
 
+def check_client_work_complete(completed_work, current_session):
+   if len(current_session.worker_uids) == 0:
+      return True
+
+   for i, fin in enumerate(completed_work):
+      if (not fin.worker_uid in current_session.worker_uids) \
+         or (not fin.session_uid == current_session.session_uid):
+         return False
+   return True
+
 def manager_process(manager_client, worker_msg_queue, reg_queue, trainer_queue):
    # UIDs of workers in the current active work session.
    current_worker_uids   = manager_client.config.worker_uids
@@ -70,9 +80,15 @@ def manager_process(manager_client, worker_msg_queue, reg_queue, trainer_queue):
    completed_work        = []
    # UIDs of workers who have completed work.
    completed_worker_uids = []
-   session_uids          = []
-
+   session_uids          = [0]
+   registered_worker_uids
    current_work_completed = False
+   current_session = utils.to_named_thing(
+      {
+         "session_uid": "0",
+         "worker_uids": []
+      }
+   )
    while True:
       while not worker_msg_queue.empty():
          try:
@@ -88,14 +104,12 @@ def manager_process(manager_client, worker_msg_queue, reg_queue, trainer_queue):
             print(worker_str)
             print("Error:", str(e))
       
-      new_data_available = False
       if len(completed_work) > 0:
          session_uids = sorted([c.session_uid for c in completed_work])
          # Reduce the session uids into a dictionary of counts.
          session_uid_counts = reduce(count_unique_things, session_uids, {})
          # Need to verify that all of the current work falls under the same
          # session UID.
-         #do some stuff here...
          completed_worker_uids = [c.worker_uid for c in completed_work]
          if set(completed_worker_uids) == set(current_worker_uids):
             print("All workers in", completed_worker_uids, "have finished.")
@@ -110,8 +124,6 @@ def manager_process(manager_client, worker_msg_queue, reg_queue, trainer_queue):
                new_worker_config_json,
                object_hook=utils.named_thing
             )
-            print("json type:", type(new_worker_config_json), "\n", new_worker_config_json)
-            print(type(json.loads(new_worker_config_json)))
 
          except Exception as e:
             print("Couldn't decode string into JSON format.")
@@ -137,19 +149,19 @@ def manager_process(manager_client, worker_msg_queue, reg_queue, trainer_queue):
          )
          new_workers = []
 
-      if len(next_worker_uids) > 0:
-         #next_worker_uids = [w.worker_uid for w in next_workers]
-         if session_uids is None:
-            session_uids = [utils.today_string]
-         trainer_config_dict = {
+      if check_client_work_complete(completed_work, current_session) \
+         and len(next_worker_uids) > 0:
+         print("All workers have completed the current session.")
+         current_session_dict = {
             "worker_uids": next_worker_uids,
             "data": [c.data_location for c in completed_worker_uids],
-            #"network_uid": session_uids[0]
+            "session_uid": session_uids[0]
          }
+         current_worker_uids = next_worker_uids
 
-         trainer_config_str = json.dumps(trainer_config_dict)
-         trainer_config = json.loads(trainer_config_str, object_hook=utils.named_thing)
-         trainer_queue.put(trainer_config)
+         current_session = utils.to_named_thing(current_session_dict)
+         trainer_queue.put(current_session)
+   time.sleep(2)
 
 def mqtt_process(manager_client):
    print("Started mqtt process") 
@@ -246,10 +258,11 @@ def main(argv):
      "sql_dbname": "XPDB"
    }
 
-   test_config_json = json.dumps(test_config_dict)
+   # test_config_json = json.dumps(test_config_dict)
 
-   print("test_config_json:\n", test_config_json)
-   test_config = json.loads(test_config_json, object_hook=utils.named_thing)
+   # print("test_config_json:\n", test_config_json)
+   # test_config = json.loads(test_config_json, object_hook=utils.named_thing)
+   test_config = utils.to_named_thing(test_config_dict)
    spinup_server(test_config)
 
 if __name__ == "__main__":
