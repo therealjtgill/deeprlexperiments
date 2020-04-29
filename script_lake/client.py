@@ -45,9 +45,12 @@ class Client(object):
 
    def on_connect(self, client, userdata, flags, rc):
       print("\nPublishing connection message")
+      worker_registration = {
+         "worker_uid:", self.worker_uid
+      }
       client.publish(
          topic=self.register_topic,
-         payload=json.dumps(str(self.config)),
+         payload=json.dumps(worker_registration),
          qos=1,
          retain=False
       )

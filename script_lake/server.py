@@ -63,7 +63,7 @@ def count_unique_things(counts, next_thing):
 
 def check_client_work_complete(completed_work, current_session):
    if len(current_session.worker_uids) == 0:
-      return True
+      return False
 
    for i, fin in enumerate(completed_work):
       if (not fin.worker_uid in current_session.worker_uids) \
@@ -161,7 +161,7 @@ def manager_process(manager_client, worker_msg_queue, reg_queue, trainer_queue):
 
          current_session = utils.to_named_thing(current_session_dict)
          trainer_queue.put(current_session)
-   time.sleep(2)
+      time.sleep(2)
 
 def mqtt_process(manager_client):
    print("Started mqtt process") 
