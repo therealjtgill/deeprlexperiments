@@ -151,7 +151,7 @@ def main(argv):
    #    test_config_json,
    #    object_hook=utils.named_thing
    # )
-   utils.to_named_thing(test_config_dict)
+   test_config = utils.to_named_thing(test_config_dict)
 
    #print(json.loads(str(test_config)))
 

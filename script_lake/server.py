@@ -81,7 +81,7 @@ def manager_process(manager_client, worker_msg_queue, reg_queue, trainer_queue):
    # UIDs of workers who have completed work.
    completed_worker_uids = []
    session_uids          = [0]
-   registered_worker_uids
+   registered_worker_uids = []
    current_work_completed = False
    current_session = utils.to_named_thing(
       {

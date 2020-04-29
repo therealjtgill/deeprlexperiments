@@ -32,7 +32,7 @@ class ServerWorkDef(object):
    def __make_new_tables(self, table_name_base, worker_uids):
       new_table_names = []
       for w_uid in worker_uids:
-         new_table_name = new_table_name_base + "_" + str(w_uid)
+         new_table_name = table_name_base + "_" + str(w_uid)
          try:
             self.cursor.execute(
                "create table `" + new_table_name + "`" + \

@@ -15,7 +15,7 @@ class named_thing(object):
 
    def __repr__(self):
       # This makes the class perfectly parsable by the JSON package.
-      return str(self.__dict__)
+      return str(self.__dict__).replace("\'", "\"")
 
 class logger(object):
    def __init__(self, my_name, out_filename=None, parent=None):
@@ -86,8 +86,14 @@ if __name__ == "__main__":
    }
 
    test_config_json = json.dumps(test_config_dict)
-
+   print("test config json:", test_config_json)
    test_config_object = json.loads(test_config_json, object_hook=named_thing)
+
+   test_config_str = str(test_config_object)
+   print("Type of json-ified str:", type(json.loads(test_config_str)))
+   print("str equals json?:", test_config_str == test_config_json)
+   print("test config str:", test_config_str)
+   print("first chars:", test_config_str[0], test_config_json[0])
 
    print(
       test_config_object.broker_url,
