@@ -35,22 +35,20 @@ class Client(object):
       ][0]
 
       registration_info_dict = {
-         "worker_uid": self.config.worker_uid
+         "worker_uid": self.worker_uid
       }
       # registration_info_json = json.dumps(registration_info_dict)
       # self.registration_info = json.loads(
       #    registration_info_json, object_hook=utils.named_thing
       # )
-      registration_info = utils.to_named_thing(registration_info_dict)
+      self.registration_info = utils.to_named_thing(registration_info_dict)
 
    def on_connect(self, client, userdata, flags, rc):
       print("\nPublishing connection message")
-      worker_registration = {
-         "worker_uid:", self.worker_uid
-      }
+
       client.publish(
          topic=self.register_topic,
-         payload=json.dumps(worker_registration),
+         payload=str(self.registration_info),
          qos=1,
          retain=False
       )
