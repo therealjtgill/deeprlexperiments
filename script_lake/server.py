@@ -46,6 +46,7 @@ class Server(object):
          self.queues.worker.put(decoded_message)
 
    def publish(self, message):
+      print("publishing a new message:", message, "on topic:", self.publish_topic)
       self.client.publish(
          self.publish_topic,
          message
@@ -63,13 +64,17 @@ def count_unique_things(counts, next_thing):
 
 def check_client_work_complete(completed_work, current_session):
    if len(current_session.worker_uids) == 0:
-      return False
+      return True
 
    for i, fin in enumerate(completed_work):
       if (not fin.worker_uid in current_session.worker_uids) \
          or (not fin.session_uid == current_session.session_uid):
          return False
    return True
+
+def mqtt_process(manager_client):
+   print("Started mqtt process") 
+   manager_client.run_de_loop()
 
 def manager_process(manager_client, worker_msg_queue, reg_queue, trainer_queue):
    # UIDs of workers in the current active work session.
@@ -92,7 +97,8 @@ def manager_process(manager_client, worker_msg_queue, reg_queue, trainer_queue):
    while True:
       while not worker_msg_queue.empty():
          try:
-            worker_str = worker_msg_queue.get().replace("\\", "")[1:-1]
+            #worker_str = worker_msg_queue.get().replace("\\", "")[1:-1]
+            worker_str = worker_msg_queue.get()
             worker_data = json.loads(
                worker_str, object_hook=utils.named_thing
             )
@@ -119,7 +125,8 @@ def manager_process(manager_client, worker_msg_queue, reg_queue, trainer_queue):
       while not reg_queue.empty():
          new_worker_config = None
          try:
-            new_worker_config_json = reg_queue.get().replace("\\", "")[1:-1]
+            #new_worker_config_json = reg_queue.get().replace("\\", "")[1:-1]
+            new_worker_config_json = reg_queue.get()
             new_worker_config = json.loads(
                new_worker_config_json,
                object_hook=utils.named_thing
@@ -150,7 +157,7 @@ def manager_process(manager_client, worker_msg_queue, reg_queue, trainer_queue):
          new_workers = []
 
       if check_client_work_complete(completed_work, current_session) \
-         and len(next_worker_uids) > 0:
+         and (len(next_worker_uids) > 0):
          print("All workers have completed the current session.")
          current_session_dict = {
             "worker_uids": next_worker_uids,
@@ -162,10 +169,6 @@ def manager_process(manager_client, worker_msg_queue, reg_queue, trainer_queue):
          current_session = utils.to_named_thing(current_session_dict)
          trainer_queue.put(current_session)
       time.sleep(2)
-
-def mqtt_process(manager_client):
-   print("Started mqtt process") 
-   manager_client.run_de_loop()
 
 # Maybe the environment will be part of the model?
 # Need to specify how SAR data is saved in trainer function arguments.
@@ -183,10 +186,13 @@ def trainer_process(manager_client, trainer_queue, model, environment):
          # Run server work definition on received data.
          work_output = current_work.do_work(train_config)
       
-      # Only publish the output of the work if the work def returns something.
-      if work_output is not None:
-         manager_client.publish(json.dumps(work_output))
-         work_output = None
+         # Only publish the output of the work if the work def returns something.
+         if work_output is not None:
+            print("Publishing work for clients to finish!")
+            manager_client.publish(json.dumps(work_output))
+            work_output = None
+         else:
+            print("work output was none, not sending more work to the clients.")
 
       time.sleep(2)
 

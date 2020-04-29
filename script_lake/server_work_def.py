@@ -65,5 +65,5 @@ class ServerWorkDef(object):
          output_params = {
          }
 
-      self.current_session = utils.to_named_thing(output_params)
+      print("server work def returning these output params:", output_params)
       return output_params

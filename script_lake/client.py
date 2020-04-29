@@ -37,10 +37,7 @@ class Client(object):
       registration_info_dict = {
          "worker_uid": self.worker_uid
       }
-      # registration_info_json = json.dumps(registration_info_dict)
-      # self.registration_info = json.loads(
-      #    registration_info_json, object_hook=utils.named_thing
-      # )
+
       self.registration_info = utils.to_named_thing(registration_info_dict)
 
    def on_connect(self, client, userdata, flags, rc):
@@ -48,13 +45,14 @@ class Client(object):
 
       client.publish(
          topic=self.register_topic,
-         payload=str(self.registration_info),
+         payload=str(self.registration_info).encode(),
          qos=1,
          retain=False
       )
 
    def on_message(self, client, userdata, message):
-      if str(message.topic) in self.listen_topics:
+      #print("\nReceived message", decoded_message, message.topic)
+      if str(message.topic.decode("utf-8")) in self.listen_topics:
          decoded_message = message.payload.decode("utf-8")
          print("\nReceived message", decoded_message, message.topic)
          self.queue.put(decoded_message)
