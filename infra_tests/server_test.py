@@ -20,7 +20,10 @@ def main(argv):
    client = mqtt.Client()
    client.connect(broker_url, broker_port)
    client.subscribe("manager", qos=1)
+   client.subscribe("worker", qos=1)
    client.on_message = on_message
+
+   client.publish("worker", "this is a test")
 
    client.loop_forever()
 
