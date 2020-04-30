@@ -1,3 +1,4 @@
+#import copy
 import numpy as np
 import pymysql
 import sys
@@ -74,3 +75,58 @@ class ServerWorkDef(object):
 
       print("server work def returning these output params:", output_params)
       return output_params
+
+
+
+class SessionManager(object):
+   def __init__(
+      self,
+      session_timeout_s=20,
+      default_worker_uids=[],
+      default_session_uid=0
+   ):
+      self.all_worker_uids = default_worker_uids
+      self.session_timeout = session_timeout_s
+      self.available_worker_uids = self.all_worker_uids
+
+      self.current_session = utils.to_named_thing(
+         {
+            "session_uid": default_session_uid,
+            "worker_uids": default_worker_uids,
+            "start_time": 0.0,
+            "end_time": 0.0,
+            "completed_worker_uids": []
+         }
+      )
+
+   def add_workers(self, new_worker_uids):
+      self.all_worker_uids += new_worker_uids
+      self.all_worker_uids = list(set(self.worker_uids))
+
+   def start_session(self, worker_params):
+      self.current_session.session_uid = worker_params.session_uid
+      self.current_session.worker_uids = self.available_worker_uids
+      self.current_session.start_time = time.time()
+      self.current_session.end_time = 0.0
+      self.current_session.completed_worker_uids = []
+
+   def attempt_end_session(self, completed_work):
+      for c in completed_work:
+         if c.worker_uid not in self.current_session.completed_worker_uids \
+            and c.worker_uid in self.current_session.worker_uids \
+            and c.session_uid == self.current_session-session_uid:
+
+            if len(self.current_session.completed_worker_uids) == 0:
+               self.current_session.end_time = time.time() + self.session_timeout
+
+            self.current_session.completed_worker_uids.append(c.worker_uid)
+
+      completed_uids = self.current_session.completed_worker_uids
+      worker_uids = self.current_session.worker_uids
+      if set(completed_uids) == set(worker_uids) \
+         or (
+            self.current_session.end_time > 0.0 and \
+            time.time() >= self.current_session.end_time
+         ):
+         return True
+      return False

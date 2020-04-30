@@ -6,6 +6,23 @@ def to_named_thing(input_data):
    output_data = json.loads(input_data_str, object_hook=named_thing)
    return output_data
 
+def extract_json_from_queue(queue):
+   extracted_items = []
+   while not queue.empty():
+      try:
+         queue_data_str = queue.get()
+         queue_data = json.loads(
+            queue_data_str, object_hook=named_thing
+         )
+         extracted_items.append(
+            queue_data
+         )
+      except Exception as e:
+         print("Couldn't decode string from the queue, might not be JSON.")
+         print(queue_data_str)
+         print("Error:", str(e))
+   return extracted_items
+
 class named_thing(object):
    def __init__(self, args):
       self.__dict__.update(args)

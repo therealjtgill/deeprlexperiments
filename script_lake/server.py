@@ -76,7 +76,13 @@ def mqtt_process(manager_client):
    print("Started mqtt process") 
    manager_client.run_de_loop()
 
-def manager_process(manager_client, worker_msg_queue, reg_queue, trainer_queue):
+def manager_process(
+   manager_client,
+   worker_msg_queue,
+   reg_queue,
+   trainer_queue,
+   session_queue
+):
    # UIDs of workers in the current active work session.
    current_worker_uids   = manager_client.config.worker_uids
    # Full configs of workers to include in the next work session.
@@ -95,20 +101,8 @@ def manager_process(manager_client, worker_msg_queue, reg_queue, trainer_queue):
       }
    )
    while True:
-      while not worker_msg_queue.empty():
-         try:
-            #worker_str = worker_msg_queue.get().replace("\\", "")[1:-1]
-            worker_str = worker_msg_queue.get()
-            worker_data = json.loads(
-               worker_str, object_hook=utils.named_thing
-            )
-            completed_work.append(
-               worker_data
-            )
-         except Exception as e:
-            print("Couldn't decode string, might not be JSON.")
-            print(worker_str)
-            print("Error:", str(e))
+      print("Grabbing completed work")
+      completed_work = utils.extract_json_from_queue(worker_msg_queue)
       
       if len(completed_work) > 0:
          session_uids = sorted([c.session_uid for c in completed_work])
@@ -122,28 +116,8 @@ def manager_process(manager_client, worker_msg_queue, reg_queue, trainer_queue):
             new_data_available = True
 
       new_workers = []
-      while not reg_queue.empty():
-         new_worker_config = None
-         try:
-            #new_worker_config_json = reg_queue.get().replace("\\", "")[1:-1]
-            new_worker_config_json = reg_queue.get()
-            new_worker_config = json.loads(
-               new_worker_config_json,
-               object_hook=utils.named_thing
-            )
-
-         except Exception as e:
-            print("Couldn't decode string into JSON format.")
-            print(new_worker_config_json)
-            print(str(e))
-
-         print("\nFound a new worker:", new_worker_config, "\nwith type:\n", type(new_worker_config))
-         
-         if new_worker_config is not None:
-            new_workers.append(
-               new_worker_config
-            )
-         time.sleep(2)
+      print("Grabbing new workers")
+      new_workers = utils.extract_json_from_queue(reg_queue)
 
       if len(new_workers) > 0:
          print("\n\nThe entire thing of new workers:", new_workers, "\n\n")
@@ -158,47 +132,49 @@ def manager_process(manager_client, worker_msg_queue, reg_queue, trainer_queue):
       if check_client_work_complete(completed_work, current_session) \
          and (len(next_worker_uids) > 0):
          print("All workers have completed the current session.")
+         print("Completed worker UIDs:", completed_worker_uids)
          current_session_dict = {
             "worker_uids": next_worker_uids,
-            "data": [c.data_location for c in completed_worker_uids],
+            "data": [c.data_location for c in completed_work],
             "session_uid": session_uids[0]
          }
          current_worker_uids = next_worker_uids
 
          current_session = utils.to_named_thing(current_session_dict)
-         trainer_queue.put(current_session)
+         #trainer_queue.put(current_session)
+         trainer_queue.put(json.dumps(current_session_dict))
+
+      print("Grabbing list of new sessions")
+      new_sessions = utils.extract_json_from_queue(session_queue)
+      if len(new_sessions) > 0:
+         manager_client.publish(str(new_sessions[-1]))
       time.sleep(2)
 
 # Maybe the environment will be part of the model?
 # Need to specify how SAR data is saved in trainer function arguments.
-def trainer_process(manager_client, trainer_queue, model, environment):
+def trainer_process(
+   manager_config,
+   session_queue,
+   trainer_queue,
+   model,
+   environment
+):
    train_config = None
-   current_work = ServerWorkDef(manager_client.config)
+   current_work = ServerWorkDef(manager_config)
    work_output  = None
    while True:
-      if not trainer_queue.empty():
-         train_config = trainer_queue.get()
-      
-      if train_config is not None:
-         print("Starting work definition with this training config:")
-         print(train_config)
-         # Run server work definition on received data.
-         work_output = current_work.do_work(train_config)
-      
-         # Only publish the output of the work if the work def returns something.
+      training_sessions = utils.extract_json_from_queue(trainer_queue)
+      if len(training_sessions) > 0:
+         work_output = current_work.do_work(training_sessions[-1])
          if work_output is not None:
-            print("Publishing work for clients to finish!")
-            manager_client.publish(json.dumps(work_output))
-            work_output = None
-         else:
-            print("work output was none, not sending more work to the clients.")
-
+            session_queue.put(json.dumps(work_output))
       time.sleep(2)
 
 def spinup_server(manager_config):
    reg_queue          = multiprocessing.SimpleQueue()
    worker_msg_queue   = multiprocessing.SimpleQueue()
    trainer_queue      = multiprocessing.SimpleQueue()
+   session_queue      = multiprocessing.SimpleQueue()
 
    manager_client = Server(
       manager_config,
@@ -219,15 +195,15 @@ def spinup_server(manager_config):
    p2 = multiprocessing.Process(
       target=manager_process,
       args=(
-         manager_client, worker_msg_queue, reg_queue, trainer_queue
+         manager_client, worker_msg_queue, reg_queue, trainer_queue, session_queue
       )
    )
 
    p3 = multiprocessing.Process(
       target=trainer_process,
       args=(
-         # manager_client, model, environment
-         manager_client, trainer_queue, None, None
+         # config, queue for new sessions, model, environment
+         manager_config, session_queue, trainer_queue, None, None
       )
    )
 
