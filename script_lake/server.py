@@ -2,7 +2,7 @@ from functools import reduce
 import json
 import multiprocessing
 import paho.mqtt.client as mqtt
-from server_work_def import ServerWorkDef
+from server_work_def import ServerWorkDef, SessionManager
 import sys
 import time
 import utils
@@ -62,16 +62,6 @@ def count_unique_things(counts, next_thing):
       counts[next_thing] = 1
    return counts
 
-def check_client_work_complete(completed_work, current_session):
-   if len(current_session.worker_uids) == 0:
-      return True
-
-   for i, fin in enumerate(completed_work):
-      if (not fin.worker_uid in current_session.worker_uids) \
-         or (not fin.session_uid == current_session.session_uid):
-         return False
-   return True
-
 def mqtt_process(manager_client):
    print("Started mqtt process") 
    manager_client.run_de_loop()
@@ -92,62 +82,43 @@ def manager_process(
    # UIDs of workers who have completed work.
    completed_worker_uids = []
    session_uids          = [0]
-   registered_worker_uids = []
-   current_work_completed = False
    current_session = utils.to_named_thing(
       {
          "session_uid": "0",
          "worker_uids": []
       }
    )
-   while True:
-      print("Grabbing completed work")
-      completed_work = utils.extract_json_from_queue(worker_msg_queue)
-      
-      if len(completed_work) > 0:
-         session_uids = sorted([c.session_uid for c in completed_work])
-         # Reduce the session uids into a dictionary of counts.
-         session_uid_counts = reduce(count_unique_things, session_uids, {})
-         # Need to verify that all of the current work falls under the same
-         # session UID.
-         completed_worker_uids = [c.worker_uid for c in completed_work]
-         if set(completed_worker_uids) == set(current_worker_uids):
-            print("All workers in", completed_worker_uids, "have finished.")
-            new_data_available = True
 
-      new_workers = []
+   session_manager = SessionManager()
+   while True:
       print("Grabbing new workers")
       new_workers = utils.extract_json_from_queue(reg_queue)
 
-      if len(new_workers) > 0:
-         print("\n\nThe entire thing of new workers:", new_workers, "\n\n")
-         new_worker_uids = [w.worker_uid for w in new_workers]
-         next_worker_uids = list(
-            set(
-               current_worker_uids + new_worker_uids
-            )
-         )
-         new_workers = []
+      session_manager.add_workers(new_workers)
 
-      if check_client_work_complete(completed_work, current_session) \
-         and (len(next_worker_uids) > 0):
-         print("All workers have completed the current session.")
-         print("Completed worker UIDs:", completed_worker_uids)
-         current_session_dict = {
-            "worker_uids": next_worker_uids,
-            "data": [c.data_location for c in completed_work],
-            "session_uid": session_uids[0]
-         }
-         current_worker_uids = next_worker_uids
-
-         current_session = utils.to_named_thing(current_session_dict)
-         #trainer_queue.put(current_session)
-         trainer_queue.put(json.dumps(current_session_dict))
+      if session_manager.session_active:
+         print("Session is active, looking for completed work")
+         completed_work = utils.extract_json_from_queue(worker_msg_queue)
+         if session_manager.attempt_end_session(completed_work):
+            # If all work is completed give it to trainer for training.
+            trainer_queue.put(str(session_manager.completed_session))
+            #session_params = session_manager.start_session()
 
       print("Grabbing list of new sessions")
       new_sessions = utils.extract_json_from_queue(session_queue)
-      if len(new_sessions) > 0:
+      print("all worker uids:", session_manager.all_worker_uids)
+      if (len(new_sessions) == 0) and (not session_manager.session_active) and (len(session_manager.all_worker_uids) > 0):
+         print("Putting something in the trainer queue...")
+         session_manager.start_session()
+         trainer_queue.put(str(session_manager.current_session))
+         
+      elif len(new_sessions) > 0:
+         print("New sessions are available, making them active")
+         # If new work is available for the workers, mark the work as new in
+         # the session manager and publish it to the workers.
+         session_manager.start_session(new_sessions[-1])
          manager_client.publish(str(new_sessions[-1]))
+
       time.sleep(2)
 
 # Maybe the environment will be part of the model?
@@ -165,7 +136,14 @@ def trainer_process(
    while True:
       training_sessions = utils.extract_json_from_queue(trainer_queue)
       if len(training_sessions) > 0:
-         work_output = current_work.do_work(training_sessions[-1])
+         print("training session?", training_sessions[-1])
+         if training_sessions[-1].session_uid == 0:
+            print("Putting together default work for workers", training_sessions[-1].worker_uids)
+            work_output = current_work.default_work(training_sessions[-1])
+            print("\tDefault work output: ", work_output)
+         else:
+            work_output = current_work.do_work(training_sessions[-1])
+
          if work_output is not None:
             session_queue.put(json.dumps(work_output))
       time.sleep(2)

@@ -51,7 +51,8 @@ class Client(object):
       )
 
    def on_message(self, client, userdata, message):
-      if not str(message.topic) in self.listen_topics:
+      if not message.topic in self.listen_topics:
+         print("message topic:", message.topic, "not in listen topics:", self.listen_topics)
          return
 
       decoded_message = message.payload.decode("utf-8")
