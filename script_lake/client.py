@@ -93,9 +93,7 @@ def work_process(work_queue, worker_client):
          else:
             print("Worker UID", worker_uid, "not mentioned in current work.")
             worker_client.publish(
-               json.dumps(
-                  str(worker_client.registration_info).encode()
-               )
+               str(worker_client.registration_info).encode()
             )
 
       time.sleep(2)

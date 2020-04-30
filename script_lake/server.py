@@ -102,7 +102,7 @@ def manager_process(
          if len(completed_work) > 0:
             print("\tFound some completed work:", completed_work)
          if session_manager.attempt_end_session(completed_work):  
-            print("\tSuccessfully ended the session", completed_work[0].session_uid)
+            print("\tSuccessfully ended the session", session_manager.current_session.session_uid)
             # If all work is completed give it to trainer for training.
             session_request = session_manager.session_request()
             print("\t\tPutting in the session request:", session_request)
