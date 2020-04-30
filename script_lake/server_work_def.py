@@ -175,6 +175,7 @@ class SessionManager(object):
       print("\tworkers that have already completed this task:", self.current_session.completed_worker_uids)
       
       for c in completed_work:
+         print("\tinstance of completed work:", c)
          print("\tcompleted worker uid:", c.worker_uid, type(c.worker_uid))
          print("\tcompleted session uid:", c.session_uid, type(c.session_uid))
          worker_uid = int(c.worker_uid)

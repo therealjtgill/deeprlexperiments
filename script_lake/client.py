@@ -43,12 +43,7 @@ class Client(object):
 
    def on_connect(self, client, userdata, flags, rc):
       print("\nPublishing connection message")
-      self.client.publish(
-         topic=self.register_topic,
-         payload=str(self.registration_info).encode(),
-         qos=1,
-         retain=False
-      )
+      self.register()
 
    def on_message(self, client, userdata, message):
       if not message.topic in self.listen_topics:
@@ -63,6 +58,14 @@ class Client(object):
       self.client.publish(
          self.publish_topic,
          message
+      )
+
+   def register(self):
+      self.client.publish(
+         self.register_topic,
+         payload=str(self.registration_info).encode(),
+         qos=1,
+         retain=False
       )
 
    def run_de_loop(self):
@@ -92,9 +95,10 @@ def work_process(work_queue, worker_client):
 
          else:
             print("Worker UID", worker_uid, "not mentioned in current work.")
-            worker_client.publish(
-               str(worker_client.registration_info).encode()
-            )
+            # worker_client.publish(
+            #    str(worker_client.registration_info).encode()
+            # )
+            worker_client.register()
 
       time.sleep(2)
       print("looping work")
