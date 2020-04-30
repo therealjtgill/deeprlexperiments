@@ -77,18 +77,12 @@ def work_process(work_queue, worker_client):
    current_work = ClientWorkDef(worker_client.config)
    worker_uid = worker_client.config.worker_uid
    while True:
-      if not work_queue.empty():
-         new_work_json = None
-         try:
-            new_work_json = work_queue.get()
-            #new_work_json = new_work_str.replace("\\", "")[1:-1]
-            new_work = json.loads(new_work_json, object_hook=utils.named_thing)
-         except Exception as e:
-            print("Could not parse JSON from string.")
-            print("new work string:", new_work_str)
-            print(str(e))
+
+      new_work = utils.extract_json_from_queue(work_queue)
+      if len(new_work) > 0:
+         new_work = new_work[-1]
          if worker_uid in new_work.worker_uids:
-            print("Doing work:\n", new_work_json)
+            print("Doing work:\n", new_work)
             response = current_work.do_work(new_work)
 
             if response is not None:
@@ -103,6 +97,7 @@ def work_process(work_queue, worker_client):
                   str(worker_client.registration_info).encode()
                )
             )
+
       time.sleep(2)
       print("looping work")
 
@@ -160,7 +155,9 @@ def main(argv):
       if os.path.exists(config_filename):
          config_file = open(config_filename, "r")
          config_json = "".join(config_file.readlines())
-         config_dict = json.loads(config_json)
+         config_dict = json.loads(config_json, parse_int=int, parse_float=float)
+         config_dict["worker_uid"] = int(config_dict["worker_uid"])
+         config_dict["broker_port"] = int(config_dict["broker_port"])
          print("Using config dict from disk,", argv[1])
 
    config = utils.to_named_thing(config_dict)

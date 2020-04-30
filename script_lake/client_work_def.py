@@ -35,7 +35,7 @@ class ClientWorkDef(object):
          # it's just a list of table names.
          #output_table_name = dynamic_work_params.new_table_names[0]
          output_table_name = [
-            p.table_name for p in dynamic_work_params.new_table_names 
+            p.table_name for p in dynamic_work_params.work_params.new_table_names 
             if p.worker_uid == self.config.worker_uid
          ][0]
          print("work def has nothing to do, so... inserting random data in the table.")

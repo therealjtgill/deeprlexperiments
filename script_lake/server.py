@@ -70,8 +70,8 @@ def manager_process(
    manager_client,
    worker_msg_queue,
    reg_queue,
-   trainer_queue,
-   session_queue
+   trainer_in_queue,
+   trainer_out_queue
 ):
    # UIDs of workers in the current active work session.
    current_worker_uids   = manager_client.config.worker_uids
@@ -91,7 +91,7 @@ def manager_process(
 
    session_manager = SessionManager()
    while True:
-      print("Grabbing new workers")
+      print("\n\n\nGrabbing new workers")
       new_workers = utils.extract_json_from_queue(reg_queue)
 
       session_manager.add_workers(new_workers)
@@ -99,25 +99,33 @@ def manager_process(
       if session_manager.session_active:
          print("Session is active, looking for completed work")
          completed_work = utils.extract_json_from_queue(worker_msg_queue)
-         if session_manager.attempt_end_session(completed_work):
+         if len(completed_work) > 0:
+            print("\tFound some completed work:", completed_work)
+         if session_manager.attempt_end_session(completed_work):  
+            print("\tSuccessfully ended the session", completed_work[0].session_uid)
             # If all work is completed give it to trainer for training.
-            trainer_queue.put(str(session_manager.completed_session))
+            session_request = session_manager.session_request()
+            print("\t\tPutting in the session request:", session_request)
+            trainer_in_queue.put(str(session_request))
             #session_params = session_manager.start_session()
 
       print("Grabbing list of new sessions")
-      new_sessions = utils.extract_json_from_queue(session_queue)
+      new_work = utils.extract_json_from_queue(trainer_out_queue)
       print("all worker uids:", session_manager.all_worker_uids)
-      if (len(new_sessions) == 0) and (not session_manager.session_active) and (len(session_manager.all_worker_uids) > 0):
-         print("Putting something in the trainer queue...")
-         session_manager.start_session()
-         trainer_queue.put(str(session_manager.current_session))
+      if (len(new_work) == 0) \
+         and (not session_manager.first_session_started) \
+         and (len(session_manager.all_worker_uids) > 0):
+         #session_manager.start_session()
+         session_request = session_manager.session_request()
+         print("Putting a session request into the trainer queue:", session_request)
+         trainer_in_queue.put(str(session_request))
          
-      elif len(new_sessions) > 0:
-         print("New sessions are available, making them active")
+      elif (len(new_work) > 0):
+         print("New work is available, making new work active")
          # If new work is available for the workers, mark the work as new in
          # the session manager and publish it to the workers.
-         session_manager.start_session(new_sessions[-1])
-         manager_client.publish(str(new_sessions[-1]))
+         session_manager.start_session(new_work[-1])
+         manager_client.publish(str(session_manager.current_session))
 
       time.sleep(2)
 
@@ -125,8 +133,8 @@ def manager_process(
 # Need to specify how SAR data is saved in trainer function arguments.
 def trainer_process(
    manager_config,
-   session_queue,
-   trainer_queue,
+   trainer_out_queue,
+   trainer_in_queue,
    model,
    environment
 ):
@@ -134,32 +142,32 @@ def trainer_process(
    current_work = ServerWorkDef(manager_config)
    work_output  = None
    while True:
-      training_sessions = utils.extract_json_from_queue(trainer_queue)
-      if len(training_sessions) > 0:
-         print("training session?", training_sessions[-1])
-         if training_sessions[-1].session_uid == 0:
-            print("Putting together default work for workers", training_sessions[-1].worker_uids)
-            work_output = current_work.default_work(training_sessions[-1])
+      session_requests = utils.extract_json_from_queue(trainer_in_queue)
+      if len(session_requests) > 0:
+         print("training session?", session_requests[-1])
+         if session_requests[-1].session_uid == 0:
+            print("Putting together default work for workers", session_requests[-1].worker_uids)
+            work_output = current_work.default_work(session_requests[-1])
             print("\tDefault work output: ", work_output)
          else:
-            work_output = current_work.do_work(training_sessions[-1])
+            work_output = current_work.do_work(session_requests[-1])
 
          if work_output is not None:
-            session_queue.put(json.dumps(work_output))
+            trainer_out_queue.put(json.dumps(work_output))
       time.sleep(2)
 
 def spinup_server(manager_config):
    reg_queue          = multiprocessing.SimpleQueue()
    worker_msg_queue   = multiprocessing.SimpleQueue()
-   trainer_queue      = multiprocessing.SimpleQueue()
-   session_queue      = multiprocessing.SimpleQueue()
+   trainer_in_queue      = multiprocessing.SimpleQueue()
+   trainer_out_queue      = multiprocessing.SimpleQueue()
 
    manager_client = Server(
       manager_config,
       {
          "register": reg_queue,
          "worker": worker_msg_queue,
-         "trainer": trainer_queue
+         "trainer": trainer_in_queue
       }
    )
 
@@ -173,7 +181,7 @@ def spinup_server(manager_config):
    p2 = multiprocessing.Process(
       target=manager_process,
       args=(
-         manager_client, worker_msg_queue, reg_queue, trainer_queue, session_queue
+         manager_client, worker_msg_queue, reg_queue, trainer_in_queue, trainer_out_queue
       )
    )
 
@@ -181,7 +189,7 @@ def spinup_server(manager_config):
       target=trainer_process,
       args=(
          # config, queue for new sessions, model, environment
-         manager_config, session_queue, trainer_queue, None, None
+         manager_config, trainer_out_queue, trainer_in_queue, None, None
       )
    )
 

@@ -78,9 +78,14 @@ class ServerWorkDef(object):
 
          if len(new_table_names) > 0:
             output_params = {
-               "new_table_names": new_table_names,
                "session_uid": dynamic_work_params.session_uid,
-               "worker_uids": dynamic_work_params.worker_uids
+               "worker_uids": dynamic_work_params.worker_uids,
+               "work_params": {
+                  "new_table_names": new_table_names,
+
+                  "num_rollouts": 50,
+                  "policy_params_location": "upurbutthurdur"
+               }
             }
       else:
          ret_vals = self.work_stuff.do_work(dynamic_work_params)
@@ -138,31 +143,50 @@ class SessionManager(object):
       self.available_worker_uids = list(set(self.available_worker_uids))
       print("Current available workers:", self.available_worker_uids)
 
-   def start_session(self, new_work={}):
-      self.current_session.session_uid += 1
-      self.current_session.worker_uids = self.available_worker_uids
+   def session_request(self):
+      session_request = utils.to_named_thing(
+         {
+            "session_uid": self.current_session.session_uid + 1,
+            "worker_uids": self.available_worker_uids
+         }
+      )
+      return session_request
+
+   def start_session(self, new_work):
+      self.current_session.session_uid = new_work.session_uid
+      self.current_session.worker_uids = new_work.worker_uids
       self.current_session.start_time = time.time()
       self.current_session.end_time = 0.0
       self.current_session.completed_worker_uids = []
-      self.current_session.work_params = new_work
+      self.current_session.work_params = new_work.work_params
+
+      if not self.first_session_started:
+         print("\tMarking the first session as started.")
+         self.first_session_started = True
 
       self.session_active = True
       return self.current_session
 
    def attempt_end_session(self, completed_work):
-      if not self.first_session_started and len(self.available_worker_uids) > 0:
-         self.first_session_started = True
-         return True
 
+      print("\tCompleted work being used to attempt session end:", completed_work)
+      print("\tcurrent session worker uids:", self.current_session.worker_uids, [type(c) for c in self.current_session.worker_uids])
+      print("\tcurrent session uid:", self.current_session.session_uid, type(self.current_session.session_uid))
+      print("\tworkers that have already completed this task:", self.current_session.completed_worker_uids)
+      
       for c in completed_work:
-         if c.worker_uid not in self.current_session.completed_worker_uids \
-            and c.worker_uid in self.current_session.worker_uids \
-            and c.session_uid == self.current_session.session_uid:
-
+         print("\tcompleted worker uid:", c.worker_uid, type(c.worker_uid))
+         print("\tcompleted session uid:", c.session_uid, type(c.session_uid))
+         worker_uid = int(c.worker_uid)
+         session_uid = int(c.session_uid)
+         if (worker_uid not in self.current_session.completed_worker_uids) \
+            and (worker_uid in self.current_session.worker_uids) \
+            and (session_uid == self.current_session.session_uid):
+            print("\tFound some work that matches")
             if len(self.current_session.completed_worker_uids) == 0:
                self.current_session.end_time = time.time() + self.session_timeout
 
-            self.current_session.completed_worker_uids.append(c.worker_uid)
+            self.current_session.completed_worker_uids.append(worker_uid)
 
       completed_uids = self.current_session.completed_worker_uids
       worker_uids = self.current_session.worker_uids

@@ -3,7 +3,12 @@ import json
 
 def to_named_thing(input_data):
    input_data_str = json.dumps(input_data)
-   output_data = json.loads(input_data_str, object_hook=named_thing)
+   output_data = json.loads(
+      input_data_str,
+      object_hook=named_thing,
+      parse_int=int,
+      parse_float=float
+   )
    return output_data
 
 def extract_json_from_queue(queue):
@@ -12,7 +17,10 @@ def extract_json_from_queue(queue):
       try:
          queue_data_str = queue.get()
          queue_data = json.loads(
-            queue_data_str, object_hook=named_thing
+            queue_data_str,
+            object_hook=named_thing,
+            parse_int=int,
+            parse_float=float
          )
          extracted_items.append(
             queue_data
