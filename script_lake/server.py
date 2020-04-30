@@ -146,8 +146,7 @@ def manager_process(manager_client, worker_msg_queue, reg_queue, trainer_queue):
          time.sleep(2)
 
       if len(new_workers) > 0:
-         print("\nThe entire thing of new workers:\n", new_workers)
-         print("type of the element in the new workers list is:\n", type(new_workers[0]))
+         print("\n\nThe entire thing of new workers:", new_workers, "\n\n")
          new_worker_uids = [w.worker_uid for w in new_workers]
          next_worker_uids = list(
             set(
@@ -264,10 +263,6 @@ def main(argv):
      "sql_dbname": "XPDB"
    }
 
-   # test_config_json = json.dumps(test_config_dict)
-
-   # print("test_config_json:\n", test_config_json)
-   # test_config = json.loads(test_config_json, object_hook=utils.named_thing)
    test_config = utils.to_named_thing(test_config_dict)
    spinup_server(test_config)
 
