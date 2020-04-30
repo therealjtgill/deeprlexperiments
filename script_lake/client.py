@@ -17,10 +17,10 @@ class Client(object):
       self.client.on_message = self.on_message
       self.client.on_connect = self.on_connect
 
+      self.client.connect(self.config.broker_url, self.config.broker_port)
+
       for topic in self.config.topics:
          self.client.subscribe(topic.name, qos=1)
-
-      self.client.connect(self.config.broker_url, self.config.broker_port)
 
       self.listen_topics = [
          e.name for e in self.config.topics if e.action == "listen"
