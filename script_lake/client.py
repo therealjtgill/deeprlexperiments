@@ -42,8 +42,7 @@ class Client(object):
 
    def on_connect(self, client, userdata, flags, rc):
       print("\nPublishing connection message")
-
-      client.publish(
+      self.client.publish(
          topic=self.register_topic,
          payload=str(self.registration_info).encode(),
          qos=1,
@@ -51,11 +50,12 @@ class Client(object):
       )
 
    def on_message(self, client, userdata, message):
-      #print("\nReceived message", decoded_message, message.topic)
-      if str(message.topic.decode("utf-8")) in self.listen_topics:
-         decoded_message = message.payload.decode("utf-8")
-         print("\nReceived message", decoded_message, message.topic)
-         self.queue.put(decoded_message)
+      if not str(message.topic) in self.listen_topics:
+         return
+
+      decoded_message = message.payload.decode("utf-8")
+      print("\nReceived message", decoded_message, message.topic)
+      self.queue.put(decoded_message)
 
    def publish(self, message):
       self.client.publish(
@@ -76,18 +76,28 @@ def work_process(work_queue, worker_client):
    worker_uid = worker_client.config.worker_uid
    while True:
       if not work_queue.empty():
-         new_work_json = work_queue.get().replace("\\", "")[1:-1]
-         new_work = json.loads(new_work_json, object_hook=utils.named_thing)
+         new_work_json = None
+         try:
+            new_work_json = work_queue.get()
+            #new_work_json = new_work_str.replace("\\", "")[1:-1]
+            new_work = json.loads(new_work_json, object_hook=utils.named_thing)
+         except Exception as e:
+            print("Could not parse JSON from string.")
+            print("new work string:", new_work_str)
+            print(str(e))
          if worker_uid in new_work.worker_uids:
             print("Doing work:\n", new_work_json)
-            
+            response = current_work.do_work(new_work)
             # Response is being faked right now.
-            response = {
-               "worker_uid": str(worker_client.worker_uid),
-               "random_str": str(time.time()),
-               "session_uid": str(new_work.session_uid)
-            }
-            worker_client.publish(json.dumps(response))
+            # response = {
+            #    "worker_uid": str(worker_client.worker_uid),
+            #    "random_str": str(time.time()),
+            #    "session_uid": str(new_work.session_uid)
+            # }
+            if response is not None:
+               worker_client.publish(json.dumps(response))
+            else:
+               print("Client worker returned a blank response, not sending to server.")
 
          else:
             print("Worker UID", worker_uid, "not mentioned in current work.")

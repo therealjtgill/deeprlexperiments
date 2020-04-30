@@ -57,7 +57,8 @@ class ServerWorkDef(object):
          if len(new_table_names) > 0:
             output_params = {
                "new_table_names": new_table_names,
-               "session_uid": "%010d" % self.session_uid
+               "session_uid": "%010d" % self.session_uid,
+               "worker_uids": dynamic_work_params.worker_uids
             }
             self.session_uid += 1
       else:
