@@ -33,13 +33,19 @@ class ServerWorkDef(object):
       new_table_names = []
       for w_uid in worker_uids:
          new_table_name = table_name_base + "_" + str(w_uid)
+         # This needs to be changed to match the schema of the environment.
          try:
             self.cursor.execute(
                "create table `" + new_table_name + "`" + \
                "(time float, state float, action float, reward float)"
             )
             self.cursor.fetchall()
-            new_table_names.append(new_table_name)
+            new_table_names.append(
+               {
+                  "table_name": new_table_name,
+                  "worker_uid": w_uid
+               }
+            )
          except Exception as e:
             print("Error occurred trying to make a new table for the workers.")
             print(str(e))
