@@ -1,0 +1,23 @@
+{
+   "broker_url": "192.168.1.4",
+   "broker_port": 1883,
+   "topics": [
+      {
+         "name": "manager",
+         "action": "listen"
+      },
+      {
+         "name": "worker",
+         "action": "publish"
+      },
+      {
+         "name": "register",
+         "action": "register"
+      }
+   ],
+   "worker_uid": 1,
+   "sql_hostname": "192.168.1.4",
+   "sql_username": "worker",
+   "sql_key_loc": "sqlkey.txt",
+   "sql_dbname": "XPDB"
+}

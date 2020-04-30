@@ -1,6 +1,7 @@
 from client_work_def import ClientWorkDef
 import json
 import multiprocessing
+import os
 import paho.mqtt.client as mqtt
 import sys
 import time
@@ -130,7 +131,7 @@ def spinup_worker(worker_config):
       j.start()
 
 def main(argv):
-   test_config_dict = {
+   config_dict = {
       "broker_url": "192.168.1.4",
       "broker_port": 1883,
       "topics": [
@@ -154,17 +155,19 @@ def main(argv):
       "sql_dbname": "XPDB"
    }
 
-   # test_config_json = json.dumps(test_config_dict)
+   if len(argv) > 1:
+      config_filename = argv[1]
+      if os.path.exists(config_filename):
+         config_file = open(config_filename, "r")
+         config_json = "".join(config_file.readlines())
+         config_dict = json.loads(config_json)
+         print("Using config dict from disk,", argv[1])
 
-   # test_config = json.loads(
-   #    test_config_json,
-   #    object_hook=utils.named_thing
-   # )
-   test_config = utils.to_named_thing(test_config_dict)
+   config = utils.to_named_thing(config_dict)
 
-   #print(json.loads(str(test_config)))
+   #print(json.loads(str(config)))
 
-   spinup_worker(test_config)
+   spinup_worker(config)
    print("exiting main loop")
 
 if __name__ == "__main__":
