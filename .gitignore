@@ -3,3 +3,4 @@ checkpoints
 *media*
 *__pycache__*
 *sqlkey*
+*worker_config.json
