@@ -274,17 +274,6 @@ def prepSarData(states, actions, rewards, gamma=0.99):
     return states_shuffled, actions_shuffled, discounted_rewards_shuffled, rewards_shuffled, next_states_shuffled
 
 
-# In[4]:
-
-
-def prepGaeData(states, actions, rewards, gamma=0.99):
-    '''
-    Converts temporally synced lists of states, actions, and rewards into shuffled
-    numpy matrices for training with generalized advantage estimation.
-    '''
-    pass
-
-
 # In[5]:
 
 

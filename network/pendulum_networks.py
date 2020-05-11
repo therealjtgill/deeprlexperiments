@@ -3,8 +3,8 @@ import os
 import tensorflow as tf
 from work_container import WorkContainerBase
 
-class PendulumNetworks(WorkContainerBase):
-   def __init__(self, session, state_size, action_size, gamma=0.99, ppo_epsilon=0.2):
+class PendulumNetworks(object):
+   def __init__(self, session, input_size, output_size, gamma=0.99, ppo_epsilon=0.2):
       self.super().__init__(state_size, action_size)
 
       self.session = session
@@ -222,4 +222,9 @@ class PendulumNetworks(WorkContainerBase):
          self.esdr_predictions
       ]
       action_prediction_means, action_prediction_stdevs, esdr_predictions = self.session.run(fetches, feed_dict=feeds)
-      return action_prediction_means, action_prediction_stdevs, esdr_predictions
+      ep_action_t = np.random.normal(
+         loc=action_prediction_means[0],
+         scale=action_prediction_stdevs[0]
+      )
+      ep_action_t = min(max(ep_action_t, [-2.0]), [2.0])
+      return action, action_prediction_means, action_prediction_stdevs, esdr_predictions
