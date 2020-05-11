@@ -222,7 +222,9 @@ def main(argv):
      "sql_hostname": "192.168.1.4",
      "sql_username": "manager",
      "sql_key_loc": "sqlkey.txt",
-     "sql_dbname": "XPDB"
+     "sql_dbname": "XPDB",
+     "fs_hostname": "192.168.1.15",
+     "fs_port": 8000
    }
 
    test_config = utils.to_named_thing(test_config_dict)

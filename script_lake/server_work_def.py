@@ -29,6 +29,12 @@ class ServerWorkDef(object):
          print("Couldn't connect to remote SQL database.", str(e))
          sys.exit(-1)
 
+      # Just sets params in constructor, no need to wrap it in a try/except.
+      self.http_handler = utils.SimpleHttpStorage(
+         static_work_params.fs_hostname,
+         static_work_params.fs_port
+      )
+
    def __make_new_tables(self, table_name_base, worker_uids):
       new_table_names = []
       for w_uid in worker_uids:
@@ -54,39 +60,34 @@ class ServerWorkDef(object):
    def default_work(self, dynamic_work_params):
       output_params = None
       new_table_name_base = utils.today_string()
-      print("work def has nothing to do, so... making default new tables with base name", new_table_name_base)
+      print(
+         "work def has nothing to do, so... making default new tables with base name",
+         new_table_name_base
+      )
       new_table_names = self.__make_new_tables(
          new_table_name_base, dynamic_work_params.worker_uids
       )
 
       if len(new_table_names) > 0:
          output_params = {
-            "new_table_names": new_table_names,
             "session_uid": dynamic_work_params.session_uid,
-            "worker_uids": dynamic_work_params.worker_uids
-         }
-      return output_params
-
-   def do_work(self, dynamic_work_params):
-      output_params = None
-      if self.work_stuff is None:
-         new_table_name_base = utils.today_string()
-         print("work def has nothing to do, so... making a new tables with base name", new_table_name_base)
-         new_table_names = self.__make_new_tables(
-            new_table_name_base, dynamic_work_params.worker_uids
-         )
-
-         if len(new_table_names) > 0:
-            output_params = {
-               "session_uid": dynamic_work_params.session_uid,
-               "worker_uids": dynamic_work_params.worker_uids,
-               "work_params": {
+            "worker_uids": dynamic_work_params.worker_uids,
+            "work_params": {
                   "new_table_names": new_table_names,
 
                   "num_rollouts": 50,
                   "policy_params_location": "upurbutthurdur"
                }
-            }
+         }
+      return output_params
+
+   def real_work(self, dynamic_work_params):
+      pass
+
+   def do_work(self, dynamic_work_params):
+      output_params = None
+      if self.work_stuff is None:
+         output_params = self.default_work(dynamic_work_params)
       else:
          ret_vals = self.work_stuff.do_work(dynamic_work_params)
          output_params = {
@@ -135,7 +136,7 @@ class SessionManager(object):
    def add_workers(self, new_workers):
       if len(new_workers) == 0:
          return
-      print("Adding workers")
+      print("Adding workers", new_workers)
       self.all_worker_uids += [w.worker_uid for w in new_workers]
       self.all_worker_uids = list(set(self.all_worker_uids))
 
