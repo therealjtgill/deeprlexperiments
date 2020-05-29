@@ -1,25 +1,22 @@
 import numpy as np
 import os
 import tensorflow as tf
-from work_container import WorkContainerBase
 
 class PendulumNetworks(object):
    def __init__(self, session, input_size, output_size, gamma=0.99, ppo_epsilon=0.2):
-      self.super().__init__(state_size, action_size)
-
       self.session = session
       self.input_size = input_size
       self.output_size = output_size
       self.gamma = gamma
       self.ppo_epsilon = ppo_epsilon
       
-      self.observations_ph = tf.placeholder(dtype=tf.float32, shape=[None, self.input_size])
+      self.observations_ph = tf.placeholder(dtype=tf.float32, shape=[None, self.input_size], name="observations")
       # esdr = expected sum of discounted rewards
-      self.esdr_ph = tf.placeholder(dtype=tf.float32, shape=[None, 1])
-      self.v_s_ph  = tf.placeholder(dtype=tf.float32, shape=[None, 1]) # V(s)
-      self.v_sp_ph = tf.placeholder(dtype=tf.float32, shape=[None, 1]) # V(s')
-      self.r_ph    = tf.placeholder(dtype=tf.float32, shape=[None, 1]) # r_t+1; r'
-      self.actions_ph = tf.placeholder(dtype=tf.float32, shape=[None, self.output_size])
+      self.esdr_ph = tf.placeholder(dtype=tf.float32, shape=[None, 1], name="expected_sum_of_discounted_rewards")
+      self.v_s_ph  = tf.placeholder(dtype=tf.float32, shape=[None, 1], name="value_of_current_state") # V(s)
+      self.v_sp_ph = tf.placeholder(dtype=tf.float32, shape=[None, 1], name="value_of_next_state") # V(s')
+      self.r_ph    = tf.placeholder(dtype=tf.float32, shape=[None, 1], name="reward_at_time_plus_1") # r_t+1; r'
+      self.actions_ph = tf.placeholder(dtype=tf.float32, shape=[None, self.output_size], name="actions")
 
       advantage = self.r_ph + self.gamma*self.v_sp_ph - self.v_s_ph
 
@@ -56,15 +53,18 @@ class PendulumNetworks(object):
       
       old_params = [v for v in tf.global_variables() if "policy_old" in v.name]
       new_params = [v for v in tf.global_variables() if "policy_new" in v.name]
-      
+
       self.assignments = [op.assign(np) for op, np in zip(old_params, new_params)]
-      
+
+      self.session.run(tf.global_variables_initializer())
+      self.saver = tf.train.Saver()
+
    def update_prev_actor(self):
       '''
       Assign the new params to the old params of the policy network.
       '''
       self.session.run(self.assignments)
-      
+
    def build_actor(self, scope_name, reuse_scope=False, trainable=True):
       with tf.variable_scope(scope_name, reuse=reuse_scope):
          W1p = tf.get_variable(
@@ -115,7 +115,7 @@ class PendulumNetworks(object):
          policy_means = 2*tf.nn.tanh(l2p_means)
 
          policy_stdevs = tf.maximum(tf.nn.softplus(l2p_stdevs), 1e-5)
-         
+
          return policy_means, policy_stdevs
 
    def build_critic(self, scope_name, reuse_scope=False, trainable=True):
@@ -171,20 +171,26 @@ class PendulumNetworks(object):
       The idea is that all episodes have been parsed through and shuffled into
       one big batch of training data.
       '''
+      print("states", states.shape)
+      print("actions", actions.shape)
+      print("discounted_rewards", discounted_rewards.shape)
+      print("rewards", rewards.shape)
+      print("next states", next_states.shape)
+
       advantage_feeds = {
          self.observations_ph: states
       }
-      
+
       advantage_fetches = self.esdr_predictions
-      
+
       v_predictions = self.session.run(advantage_fetches, feed_dict=advantage_feeds)
-      
+
       esdr_estimate_feeds = {
          self.observations_ph: next_states
       }
 
       v_sp_predictions = self.session.run(advantage_fetches, feed_dict=esdr_estimate_feeds)
-      
+
       optimize_feeds = {
          self.observations_ph: states,
          self.esdr_ph: discounted_rewards,
@@ -193,7 +199,7 @@ class PendulumNetworks(object):
          self.v_sp_ph: v_sp_predictions,
          self.r_ph: rewards
       }
-      
+
       optimize_fetches = [
          self.actor_loss,
          self.action_prediction_means,
@@ -202,19 +208,21 @@ class PendulumNetworks(object):
          self.actor_optimizer,
          self.critic_optimizer
       ]
-      
+
       loss, action_prediction_means, action_prediction_stdevs, esdr_predictions, _1, _2 = self.session.run(optimize_fetches, feed_dict=optimize_feeds)
-      
+
       return loss, action_prediction_means, action_prediction_stdevs, esdr_predictions
-   
+
    def predict(self, state):
       '''
       Expects state to have the shape [num_state_features]
       '''
-      
+
       feeds = {
          self.observations_ph: np.array([state])
       }
+
+      print("shape of observation being fed in:", np.array([state]).shape, state.shape)
 
       fetches = [
          self.action_prediction_means,
@@ -227,4 +235,10 @@ class PendulumNetworks(object):
          scale=action_prediction_stdevs[0]
       )
       ep_action_t = min(max(ep_action_t, [-2.0]), [2.0])
-      return action, action_prediction_means, action_prediction_stdevs, esdr_predictions
+      return ep_action_t, action_prediction_means, action_prediction_stdevs, esdr_predictions
+
+   def save_params(self, filename):
+      self.saver.save(self.session, filename)
+
+   def load_params(self, filename):
+      self.saver.restore(self.session, filename)
