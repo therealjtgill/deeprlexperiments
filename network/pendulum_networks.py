@@ -171,11 +171,11 @@ class PendulumNetworks(object):
       The idea is that all episodes have been parsed through and shuffled into
       one big batch of training data.
       '''
-      print("states", states.shape)
-      print("actions", actions.shape)
-      print("discounted_rewards", discounted_rewards.shape)
-      print("rewards", rewards.shape)
-      print("next states", next_states.shape)
+      #print("states", states.shape)
+      #print("actions", actions.shape)
+      #print("discounted_rewards", discounted_rewards.shape)
+      #print("rewards", rewards.shape)
+      #print("next states", next_states.shape)
 
       advantage_feeds = {
          self.observations_ph: states
@@ -222,7 +222,7 @@ class PendulumNetworks(object):
          self.observations_ph: np.array([state])
       }
 
-      print("shape of observation being fed in:", np.array([state]).shape, state.shape)
+      #print("shape of observation being fed in:", np.array([state]).shape, state.shape)
 
       fetches = [
          self.action_prediction_means,

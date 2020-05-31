@@ -33,7 +33,6 @@ class ClientWorkDef(object):
       if self.work_stuff is None:
          # This should technically be mapped to the worker UID, but for now
          # it's just a list of table names.
-         #output_table_name = dynamic_work_params.new_table_names[0]
          output_table_name = [
             p.table_name for p in dynamic_work_params.work_params.new_table_names 
             if p.worker_uid == self.config.worker_uid
@@ -41,9 +40,6 @@ class ClientWorkDef(object):
          print("work def has nothing to do, so... inserting random data in the table.")
          random_data = np.random.rand(100, 4)
          
-         #column_names = ", ".join(
-         #   ["col_" + str(i) for i in range(random_data.shape[1])]
-         #)
          column_names = ["time", "state", "action", "reward"]
          for i in range(random_data.shape[0]):
             random_stuff = random_data[i, :]
@@ -63,5 +59,9 @@ class ClientWorkDef(object):
             "session_uid": str(dynamic_work_params.session_uid)
          }
       else:
+         output_table_name = [
+            p.table_name for p in dynamic_work_params.work_params.new_table_names 
+            if p.worker_uid == self.config.worker_uid
+         ][0]
          ret_vals = self.work_stuff.do_work(dynamic_work_params)
       return response

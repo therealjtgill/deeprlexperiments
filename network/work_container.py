@@ -1,3 +1,4 @@
+import datetime
 import gym
 import matplotlib.pyplot as plt
 import numpy as np
@@ -67,7 +68,7 @@ class WorkContainer(object):
       ep_state_t = self.env.reset()
       ep_states.append(ep_state_t)
       for t in range(max_steps):
-         print("shape of ep_state_t", ep_state_t.shape)
+         #print("shape of ep_state_t", ep_state_t.shape)
          ret_vals = self.networks.predict(ep_state_t)
          ep_action_t = ret_vals[0]
          #print(ep_action_t)
@@ -123,7 +124,7 @@ def render_agent(env, agent, debug=False):
     iterator_variable = 0
     while iterator_variable < 1000:
         ret_vals = agent.predict(state_t)
-        action_t = np.random.normal(loc=ret_vals[0][0], scale=ret_vals[1][0])
+        action_t = np.random.normal(loc=ret_vals[1][0], scale=ret_vals[2][0])
         #print(ep_action_t)
         action_t = min(max(action_t, [-2.0]), [2.0])
         actions.append(action_t)
@@ -166,20 +167,15 @@ if __name__ == "__main__":
 
    wc = WorkContainer(agent, pendulum)
 
-   #session.run(tf.global_variables_initializer())
-   #saver = tf.train.Saver()
-
    average_rewards = []
    average_stdevs = []
    last_saved_at = 0
-   for i in range(300):
+   for i in range(600):
+      # Collect data
       states, actions, rewards = accumulate_data(wc)
-      states_pro = []
-      actions_pro = []
-      rewards_pro = []
-      discounted_rewards_pro = []
-      next_states_pro = []
       last_10_average_rewards = np.average(average_rewards[-10:])
+
+      # Save criteria
       if (len(average_rewards) > 20) and (last_10_average_rewards >= -900) and (i - last_saved_at > 50) or ((i > 0) and average_rewards[-1] >= -400):
          print("Saving the model after finding last 10 average rewards of:", last_10_average_rewards)
          save_name = "holyfuckingshit_" + str(last_10_average_rewards) + "_" + str(datetime.datetime.today()).replace(":", "-").replace(" ", "-")
@@ -190,25 +186,35 @@ if __name__ == "__main__":
          save_name = "periodic_" + str(last_10_average_rewards) + "_" + str(datetime.datetime.today()).replace(":", "-").replace(" ", "-")
          save_dir = os.path.join("checkpoints", save_name)
          wc.save_params(save_dir)
+
+      # Render/plot criteria
+      # if i % 500 == 0 and i > 0:
+      #    plt.figure()
+      #    plt.plot(average_stdevs)
+      #    plt.title("Average stdevs so far")
+      #    plt.figure()
+      #    plt.plot(average_rewards)
+      #    plt.title("average rewards so far")
+
+      #    plottable_actions, plottable_stdevs, plottable_means = render_agent(wc.env, wc.networks)
+      #    plt.figure()
+      #    max_stddev = np.max(plottable_stdevs)
+      #    plt.errorbar(range(len(plottable_means)), plottable_means, plottable_stdevs/max_stddev, linestyle='None')
+      #    plt.scatter(range(len(plottable_actions)), plottable_actions, color='y')
+      #    plt.scatter(range(len(plottable_means)), plottable_means, color='r')
+      #    plt.title("Actions Taken in Rendered Environment")
+      #    plt.xlabel("max stddev:" + str(max_stddev))
+      #    plt.show()
+      #    plt.close('all')
       if i % 20 == 0 and i > 0:
-         plt.figure()
-         plt.plot(average_stdevs)
-         plt.title("Average stdevs so far")
-         plt.figure()
-         plt.plot(average_rewards)
-         plt.title("average rewards so far")
+         render_agent(wc.env, wc.networks)
 
-         plottable_actions, plottable_stdevs, plottable_means = render_agent(wc.env, wc.networks)
-         plt.figure()
-         max_stddev = np.max(plottable_stdevs)
-         plt.errorbar(range(len(plottable_means)), plottable_means, plottable_stdevs/max_stddev, linestyle='None')
-         plt.scatter(range(len(plottable_actions)), plottable_actions, color='y')
-         plt.scatter(range(len(plottable_means)), plottable_means, color='r')
-         plt.title("Actions Taken in Rendered Environment")
-         plt.xlabel("max stddev:" + str(max_stddev))
-         plt.show()
-         plt.close('all')
-
+      # Train on collected data
+      states_pro = []
+      actions_pro = []
+      rewards_pro = []
+      discounted_rewards_pro = []
+      next_states_pro = []
       for j in range(len(actions)):
          ret = prep_sar_data(states[j], actions[j], rewards[j])
          states_pro.append(ret[0])
@@ -222,15 +228,6 @@ if __name__ == "__main__":
 
       for k in range(5*len(states_pro)):
          train_index = np.random.choice(a=range(len(states_pro)))
-         #print("Shape of selected next states:", next_states_pro[train_index].shape)
-         #print("Shape of selected states:", states_pro[train_index].shape)
-         #ret = agent.trainSarBatches(
-         #      states_pro[train_index],
-         #      actions_pro[train_index],
-         #      discounted_rewards_pro[train_index],
-         #      rewards_pro[train_index],
-         #      next_states_pro[train_index]
-         #)
          ret = wc.train_batch(
             states_pro[train_index],
             actions_pro[train_index],
@@ -239,8 +236,8 @@ if __name__ == "__main__":
             next_states_pro[train_index]
          )
          if np.isnan(ret[0]):
-               print("Received nan loss, stopping training.")
-               sys.exit(-1)
+            print("Received nan loss, stopping training.")
+            sys.exit(-1)
       wc.networks.update_prev_actor()
       print(i)
       average_reward = np.average([sum(r) for r in rewards])
