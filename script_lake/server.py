@@ -157,10 +157,10 @@ def trainer_process(
       time.sleep(2)
 
 def spinup_server(manager_config):
-   reg_queue          = multiprocessing.SimpleQueue()
-   worker_msg_queue   = multiprocessing.SimpleQueue()
-   trainer_in_queue      = multiprocessing.SimpleQueue()
-   trainer_out_queue      = multiprocessing.SimpleQueue()
+   reg_queue         = multiprocessing.SimpleQueue()
+   worker_msg_queue  = multiprocessing.SimpleQueue()
+   trainer_in_queue  = multiprocessing.SimpleQueue()
+   trainer_out_queue = multiprocessing.SimpleQueue()
 
    manager_client = Server(
       manager_config,

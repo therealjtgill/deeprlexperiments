@@ -1,5 +1,6 @@
 import copy
 import numpy as np
+import pandas as pd
 import pymysql
 import sys
 import time
@@ -8,7 +9,24 @@ import utils
 class ServerWorkDef(object):
    def __init__(self, static_work_params, work_stuff=None):
       self.config = static_work_params
+      self.num_train_loops = 5
       self.work_stuff = work_stuff
+      self.column_names = ["time", "state", "action", "reward"]
+      if self.work_stuff is not None:
+         state_size  = self.work_stuff.get_state_size()
+         action_size = self.work_stuff.get_action_size()
+         self.action_names = ["action_" + str(i) for i in range(len(action_size))]
+         self.state_names = ["state_" + str(i) for i in range(len(state_size))]
+         self.next_state_names = ["next_state_" + str(i) for i in range(len(state_size))]
+         self.column_names = [
+            "time",
+            "reward",
+            "discounted_reward",
+            *self.state_names,
+            *self.action_names,
+            *self.next_state_names
+         ]
+         self.query_column_names = [c for c in self.column_names if "time" not in c]
 
       sql_pass = utils.decrypt_ciphertext(self.config.sql_key_loc)
 
@@ -29,7 +47,6 @@ class ServerWorkDef(object):
          print("Couldn't connect to remote SQL database.", str(e))
          sys.exit(-1)
 
-      # Just sets params in constructor, no need to wrap it in a try/except.
       self.http_handler = utils.SimpleHttpStorage(
          static_work_params.fs_hostname,
          static_work_params.fs_port
@@ -41,9 +58,16 @@ class ServerWorkDef(object):
          new_table_name = table_name_base + "_" + str(w_uid)
          # This needs to be changed to match the schema of the environment.
          try:
+            # self.cursor.execute(
+            #    "create table `" + new_table_name + "`" + \
+            #    "(time float, state float, action float, reward float)"
+            # )
+            column_schema = [
+               c + " float" for c in self.column_names
+            ]
             self.cursor.execute(
                "create table `" + new_table_name + "`" + \
-               "(time float, state float, action float, reward float)"
+               "(" + ", ".join(column_schema) + ")"
             )
             self.cursor.fetchall()
             new_table_names.append(
@@ -61,7 +85,7 @@ class ServerWorkDef(object):
       output_params = None
       new_table_name_base = utils.today_string()
       print(
-         "work def has nothing to do, so... making default new tables with base name",
+         "work def is undefined, making default new tables with base name",
          new_table_name_base
       )
       new_table_names = self.__make_new_tables(
@@ -73,24 +97,60 @@ class ServerWorkDef(object):
             "session_uid": dynamic_work_params.session_uid,
             "worker_uids": dynamic_work_params.worker_uids,
             "work_params": {
-                  "new_table_names": new_table_names,
-
-                  "num_rollouts": 50,
-                  "policy_params_location": "upurbutthurdur"
-               }
+               "new_table_names": new_table_names,
+               "num_rollouts": 50,
+               "checkpoint_name": str(np.random.randint(0, 1000)),
+               "checkpoint_filenames": []
+            }
          }
       return output_params
-
-   def real_work(self, dynamic_work_params):
-      pass
 
    def do_work(self, dynamic_work_params):
       output_params = None
       if self.work_stuff is None:
          output_params = self.default_work(dynamic_work_params)
       else:
-         ret_vals = self.work_stuff.do_work(dynamic_work_params)
+         new_table_name_base = utils.today_string()
+         new_table_names = self.__make_new_tables(
+            new_table_name_base, dynamic_work_params.worker_uids
+         )
+
+         action_rollouts = []
+         state_rollouts = []
+         discounted_reward_rollouts = []
+         reward_rollouts = []
+         next_state_rollouts = []
+         for table_name in dynamic_work_params.table_names:
+            df = pd.read_sql(
+               "select " + ", ".join(self.query_column_names) + " from " + \
+               "`" + table_name "`",
+               self.db
+            )
+            action_rollouts.append(df[self.action_names])
+            state_rollouts.append(df[self.state_names])
+            next_state_rollouts.append(df[self.next_state_names])
+            discounted_reward_rollouts.append(df["discounted_reward"])
+            reward_rollouts.append(df["reward"])
+
+         for i in range(self.num_train_loops):
+            train_index = np.random.choice(len(action_rollouts))
+            self.work_stuff.train_batch(
+               state_rollouts[train_index],
+               action_rollouts[train_index],
+               discounted_reward_rollouts[train_index],
+               reward_rollouts[train_index],
+               next_state_rollouts[train_index]
+            )
+
          output_params = {
+            "session_uid": dynamic_work_params.session_uid,
+            "worker_uids": dynamic_work_params.worker_uids,
+            "work_params": {
+               "new_table_names": new_table_names,
+               "num_rollouts": 50,
+               "checkpoint_name": str(np.random.randint(0, 1000)),
+               "checkpoint_filenames": []
+            }
          }
 
       print("server work def returning these output params:", output_params)
@@ -148,7 +208,8 @@ class SessionManager(object):
       session_request = utils.to_named_thing(
          {
             "session_uid": self.current_session.session_uid + 1,
-            "worker_uids": self.available_worker_uids
+            "worker_uids": self.available_worker_uids,
+            "table_names": self.current_session.work_params.new_table_names
          }
       )
       return session_request

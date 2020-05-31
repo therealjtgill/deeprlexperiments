@@ -8,12 +8,13 @@ import tensorflow as tf
 from pendulum_networks import PendulumNetworks
 
 class WorkContainer(object):
-   def __init__(self, networks, environment):
+   def __init__(self, networks, environment, reward_gamma=0.99):
       # Policy and value networks (ugliness)
       self.networks = networks
       self.env = environment
       self.state_size  = len(self.env.observation_space.high)
       self.action_size = len(self.env.action_space.high)
+      self.gamma = reward_gamma
 
    def get_state_size(self):
       self.state_size
@@ -82,38 +83,47 @@ class WorkContainer(object):
             break
          ep_state_t = ep_state_tp1
 
-      return ep_states, ep_actions, ep_rewards
+      #return ep_states, ep_actions, ep_rewards
+      return self.prep_sar_data(ep_states, ep_actions, ep_rewards)
 
+   def prep_sar_data(self, states, actions, rewards):
+      '''
+      Takes temporally sequenced data with single timestep reward samples and
+      converts rewards into samples of sum of discounted rewards using the
+      single rollout. Basically a conversion from an episode's worth of SAR data
+      to an episode's worth of SARSA data.
+      '''
+      next_states = states[1:]
+      states = states[:-1]
+      actions = actions[:-1]
+      rewards = rewards[:-1]
+      discounted_rewards = []
+      discounted_sum_rewards = 0.0
 
-def prep_sar_data(states, actions, rewards, gamma=0.99):
-   '''
-   Takes temporally sequenced data with single timestep reward samples and
-   converts rewards into samples of sum of discounted rewards using the
-   single rollout. Basically a conversion from an episode's worth of SAR data
-   to an episode's worth of SARSA data.
-   '''
-   next_states = states[1:]
-   states = states[:-1]
-   actions = actions[:-1]
-   rewards = rewards[:-1]
-   discounted_rewards = []
-   discounted_sum_rewards = 0.0
+      for i in range(len(rewards) - 1, -1, -1):
+         discounted_sum_rewards = self.gamma*discounted_sum_rewards + rewards[i]
+         discounted_rewards.append(discounted_sum_rewards)
 
-   for i in range(len(rewards) - 1, -1, -1):
-      discounted_sum_rewards = gamma*discounted_sum_rewards + rewards[i]
-      discounted_rewards.append(discounted_sum_rewards)
+      discounted_rewards = np.expand_dims(
+         np.array(discounted_rewards[::-1]),
+         axis=1
+      )
 
-   discounted_rewards = np.expand_dims(
-      np.array(discounted_rewards[::-1]),
-      axis=1
-   )
+      actions = np.array(actions)
+      states = np.array(states)
+      rewards = np.expand_dims(np.array(rewards), axis=1)
+      next_states = np.array(next_states)
 
-   actions = np.array(actions)
-   states = np.array(states)
-   rewards = np.expand_dims(np.array(rewards), axis=1)
-   next_states = np.array(next_states)
+      ret_dict = {
+         "states": states,
+         "actions": actions,
+         "discounted_rewards": discounted_rewards,
+         "rewards": rewards,
+         "next_states": next_states
+      }
 
-   return states, actions, discounted_rewards, rewards, next_states
+      #return states, actions, discounted_rewards, rewards, next_states
+      return ret_dict
 
 def render_agent(env, agent, debug=False):
     state_t = env.reset()
@@ -141,17 +151,17 @@ def render_agent(env, agent, debug=False):
     return actions, stdevs, means
 
 def accumulate_data(wc, max_rollouts=40):
-   states = []
-   actions = []
-   rewards = []
+   rollout_returns = []
    for rollout_count in range(max_rollouts):
       # Episode states, episode actions, episode rewards
-      ep_states, ep_actions, ep_rewards = wc.perform_rollout()
-      states.append(ep_states)
-      actions.append(ep_actions)
-      rewards.append(ep_rewards)
+      #ep_states, ep_actions, ep_rewards = wc.perform_rollout()
+      episode_metadata = wc.perform_rollout()
+      # states.append(ep_states)
+      # actions.append(ep_actions)
+      # rewards.append(ep_rewards)
+      rollout_returns.append(episode_metadata)
 
-   return states, actions, rewards
+   return rollout_returns
 
 if __name__ == "__main__":
    pendulum = gym.make("Pendulum-v0")
@@ -172,7 +182,8 @@ if __name__ == "__main__":
    last_saved_at = 0
    for i in range(600):
       # Collect data
-      states, actions, rewards = accumulate_data(wc)
+      #states, actions, rewards = accumulate_data(wc)
+      rollout_returns = accumulate_data(wc)
       last_10_average_rewards = np.average(average_rewards[-10:])
 
       # Save criteria
@@ -215,16 +226,21 @@ if __name__ == "__main__":
       rewards_pro = []
       discounted_rewards_pro = []
       next_states_pro = []
-      for j in range(len(actions)):
-         ret = prep_sar_data(states[j], actions[j], rewards[j])
-         states_pro.append(ret[0])
-         actions_pro.append(ret[1])
-         discounted_rewards_pro.append(ret[2])
-         rewards_pro.append(ret[3])
-         next_states_pro.append(ret[4])
+      #for j in range(len(actions)):
+      ret = None
+      for j in range(len(rollout_returns)):
+         # ret = prep_sar_data(states[j], actions[j], rewards[j])
+         # states_pro.append(ret[0])
+         # actions_pro.append(ret[1])
+         # discounted_rewards_pro.append(ret[2])
+         # rewards_pro.append(ret[3])
+         # next_states_pro.append(ret[4])
          
-         mean_reward = np.average(ret[1])
-         stdev_reward = np.std(ret[1])
+         states_pro.append(rollout_returns[j]["states"])
+         actions_pro.append(rollout_returns[j]["actions"])
+         discounted_rewards_pro.append(rollout_returns[j]["discounted_rewards"])
+         rewards_pro.append(rollout_returns[j]["rewards"])
+         next_states_pro.append(rollout_returns[j]["next_states"])
 
       for k in range(5*len(states_pro)):
          train_index = np.random.choice(a=range(len(states_pro)))
@@ -240,7 +256,7 @@ if __name__ == "__main__":
             sys.exit(-1)
       wc.networks.update_prev_actor()
       print(i)
-      average_reward = np.average([sum(r) for r in rewards])
+      average_reward = np.average([sum(r["rewards"]) for r in rollout_returns])
       print("average reward: ", average_reward, "stdevs:", np.average(np.squeeze(ret[2])), "losses:", np.average(np.squeeze(ret[0])))
       average_stdevs.append(np.average(np.squeeze(ret[2])))
       average_rewards.append(average_reward)
