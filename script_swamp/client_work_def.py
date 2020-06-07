@@ -105,12 +105,13 @@ class ClientWorkDef(object):
          for i in range(len(ret_dict["states"])):
             field_list = [
                i, # Just let this happen; time field is a counter :'(
-               ret_dict["rewards"][i],
-               ret_dict["discounted_rewards"][i],
+               ret_dict["rewards"][i, 0],
+               ret_dict["discounted_rewards"][i, 0],
                *ret_dict["states"][i],
                *ret_dict["actions"][i],
                *ret_dict["next_states"][i]
             ]
+            print("Field list I\'m trying to write:", field_list)
             field_list = [str(f) for f in field_list]
             field_data = ", ".join(field_list)
             self.cursor.execute(
