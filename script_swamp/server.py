@@ -154,7 +154,7 @@ def trainer_process(
       session_requests = utils.extract_json_from_queue(trainer_in_queue)
       if len(session_requests) > 0:
          print("training session?", session_requests[-1])
-         if session_requests[-1].session_uid == 0:
+         if session_requests[-1].session_uid == 1:
             print("Putting together default work for workers", session_requests[-1].worker_uids)
             work_output = current_work.default_work(session_requests[-1])
             print("\tDefault work output: ", work_output)

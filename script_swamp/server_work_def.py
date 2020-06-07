@@ -96,6 +96,14 @@ class ServerWorkDef(object):
          new_table_name_base, dynamic_work_params.worker_uids
       )
 
+      checkpoint_name = utils.today_string()
+      self.work_stuff.save_params(checkpoint_name)
+      checkpoint_filenames = glob.glob(checkpoint_name + "*")
+
+      print("Uploading checkpoint files to HTTP storage.")
+      for ckpt_file in checkpoint_filenames:
+         self.http_handler.upload_file(ckpt_file)
+
       if len(new_table_names) > 0:
          output_params = {
             "session_uid": dynamic_work_params.session_uid,
@@ -103,8 +111,8 @@ class ServerWorkDef(object):
             "work_params": {
                "new_table_names": new_table_names,
                "num_rollouts": 50,
-               "checkpoint_name": str(np.random.randint(0, 1000)),
-               "checkpoint_filenames": []
+               "checkpoint_name": checkpoint_name,
+               "checkpoint_filenames": checkpoint_filenames
             }
          }
       return output_params
@@ -149,6 +157,10 @@ class ServerWorkDef(object):
          checkpoint_name = utils.today_string()
          self.work_stuff.save_params(checkpoint_name)
          checkpoint_filenames = glob.glob(checkpoint_name + "*")
+
+         print("Uploading checkpoint files to HTTP storage.")
+         for ckpt_file in checkpoint_filenames:
+            self.http_handler.upload_file(ckpt_file)
 
          output_params = {
             "session_uid": dynamic_work_params.session_uid,

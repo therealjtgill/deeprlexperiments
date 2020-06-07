@@ -89,14 +89,13 @@ class ClientWorkDef(object):
          # Copy checkpoint files from file server to local disk.
          work_filenames = dynamic_work_params.work_params.checkpoint_filenames
          checkpoint_name = dynamic_work_params.work_params.checkpoint_name
+         print("Downloading checkpoint files named:", work_filenames)
          for filename in work_filenames:
             self.http_handler.download_file(filename)
 
          # Load params from the last updated checkpoint and perform the policy
          # rollout against the checkpoint.
-         self.work_stuff.load_params(
-            checkpoint_name
-         )
+         self.work_stuff.load_params(checkpoint_name)
          ret_dict = self.work_stuff.perform_rollout(
             dynamic_work_params.num_rollouts
          )

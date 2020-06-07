@@ -21,11 +21,11 @@ class RemoteFileStorage(object):
       )
 
 class SimpleHttpStorage(RemoteFileStorage):
-   def __init__(self, hostname, port, download_dir=""):
+   def __init__(self, hostname, port, download_dir="."):
       self.hostname = hostname
       self.port = port
       self.host_url = "http://" + str(self.hostname) + ":" + str(self.port)
-      self.download_dir = ""
+      self.download_dir = download_dir
 
    def upload_file(self, filename):
       if not os.path.exists(filename):
