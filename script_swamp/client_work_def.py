@@ -97,7 +97,7 @@ class ClientWorkDef(object):
          # rollout against the checkpoint.
          self.work_stuff.load_params(checkpoint_name)
          ret_dict = self.work_stuff.perform_rollout(
-            dynamic_work_params.num_rollouts
+            dynamic_work_params.work_params.num_rollouts
          )
 
          # Save output from rollout to the SQL database, order of fields has
