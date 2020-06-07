@@ -1,4 +1,5 @@
 import copy
+import glob
 import numpy as np
 import pandas as pd
 import pymysql
@@ -18,9 +19,9 @@ class ServerWorkDef(object):
       if self.work_stuff is not None:
          state_size  = self.work_stuff.get_state_size()
          action_size = self.work_stuff.get_action_size()
-         self.action_names = ["action_" + str(i) for i in range(len(action_size))]
-         self.state_names = ["state_" + str(i) for i in range(len(state_size))]
-         self.next_state_names = ["next_state_" + str(i) for i in range(len(state_size))]
+         self.action_names = ["action_" + str(i) for i in range(action_size)]
+         self.state_names = ["state_" + str(i) for i in range(state_size)]
+         self.next_state_names = ["next_state_" + str(i) for i in range(state_size)]
          self.column_names = [
             "time",
             "reward",
@@ -145,14 +146,18 @@ class ServerWorkDef(object):
                next_state_rollouts[train_index]
             )
 
+         checkpoint_name = utils.today_string()
+         self.work_stuff.save_params(checkpoint_name)
+         checkpoint_filenames = glob.glob(checkpoint_name + "*")
+
          output_params = {
             "session_uid": dynamic_work_params.session_uid,
             "worker_uids": dynamic_work_params.worker_uids,
             "work_params": {
                "new_table_names": new_table_names,
                "num_rollouts": 50,
-               "checkpoint_name": str(np.random.randint(0, 1000)),
-               "checkpoint_filenames": []
+               "checkpoint_name": checkpoint_name,
+               "checkpoint_filenames": checkpoint_filenames
             }
          }
 
@@ -212,7 +217,7 @@ class SessionManager(object):
          {
             "session_uid": self.current_session.session_uid + 1,
             "worker_uids": self.available_worker_uids,
-            "table_names": self.current_session.work_params.new_table_names
+            #"table_names": self.current_session.work_params.new_table_names
          }
       )
       return session_request

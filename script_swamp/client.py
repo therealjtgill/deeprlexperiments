@@ -1,10 +1,13 @@
-from client_work_def import ClientWorkDef
+import gym
 import json
 import multiprocessing
 import os
 import paho.mqtt.client as mqtt
 import sys
+import tensorflow as tf
 import time
+
+from client_work_def import ClientWorkDef
 import utils
 
 class Client(object):
@@ -77,7 +80,19 @@ def mqtt_process(worker_client):
 
 def work_process(work_queue, worker_client):
    print("Started work process")
-   current_work = ClientWorkDef(worker_client.config)
+   pendulum = gym.make("Pendulum-v0")
+   session = tf.Session()
+   print(pendulum.observation_space.shape)
+   print(pendulum.action_space)
+   num_actions = len(pendulum.action_space.high)
+   agent = PendulumNetworks(
+      session,
+      pendulum.observation_space.shape[0],
+      num_actions
+   )
+
+   work = WorkContainer(agent, pendulum)
+   current_work = ClientWorkDef(worker_client.config, work)
    worker_uid = worker_client.config.worker_uid
    while True:
 

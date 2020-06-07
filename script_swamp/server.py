@@ -1,10 +1,15 @@
 from functools import reduce
+import gym
 import json
 import multiprocessing
 import paho.mqtt.client as mqtt
-from server_work_def import ServerWorkDef, SessionManager
 import sys
+import tensorflow as tf
 import time
+
+from work_container import WorkContainer
+from pendulum_networks import PendulumNetworks
+from server_work_def import ServerWorkDef, SessionManager
 import utils
 
 class Server(object):
@@ -54,13 +59,6 @@ class Server(object):
 
    def run_de_loop(self):
       self.client.loop_forever()
-
-def count_unique_things(counts, next_thing):
-   if next_thing in counts.keys():
-      counts[next_thing] += 1
-   else:
-      counts[next_thing] = 1
-   return counts
 
 def mqtt_process(manager_client):
    print("Started mqtt process") 
@@ -114,8 +112,8 @@ def manager_process(
       print("all worker uids:", session_manager.all_worker_uids)
       if (len(new_work) == 0) \
          and (not session_manager.first_session_started) \
-         and (len(session_manager.all_worker_uids) > 0):
-         #session_manager.start_session()
+         and (len(session_manager.all_worker_uids) > 0
+      ):
          session_request = session_manager.session_request()
          print("Putting a session request into the trainer queue:", session_request)
          trainer_in_queue.put(str(session_request))
@@ -129,8 +127,6 @@ def manager_process(
 
       time.sleep(2)
 
-# Maybe the environment will be part of the model?
-# Need to specify how SAR data is saved in trainer function arguments.
 def trainer_process(
    manager_config,
    trainer_out_queue,
@@ -138,8 +134,21 @@ def trainer_process(
    model,
    environment
 ):
-   train_config = None
-   current_work = ServerWorkDef(manager_config)
+   pendulum = gym.make("Pendulum-v0")
+   session = tf.Session()
+   print(pendulum.observation_space.shape)
+   print(pendulum.action_space)
+   num_actions = len(pendulum.action_space.high)
+   agent = PendulumNetworks(
+      session,
+      pendulum.observation_space.shape[0],
+      num_actions
+   )
+
+   train_config = WorkContainer(agent, pendulum)
+
+   print("size of action space:", train_config.get_action_size())
+   current_work = ServerWorkDef(manager_config, train_config)
    work_output  = None
    while True:
       session_requests = utils.extract_json_from_queue(trainer_in_queue)

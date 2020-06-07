@@ -57,7 +57,7 @@ class ClientWorkDef(object):
       # This should technically be mapped to the worker UID, but for now
       # it's just a list of table names.
       output_table_name = [
-         p.table_name for p in dynamic_work_params.work_params.new_table_names 
+         p.table_name for p in dynamic_work_params.work_params.new_table_names
          if p.worker_uid == self.config.worker_uid
       ][0]
 

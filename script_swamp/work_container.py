@@ -18,10 +18,10 @@ class WorkContainer(object):
       self.gamma = reward_gamma
 
    def get_state_size(self):
-      self.state_size
+      return self.state_size
 
    def get_action_size(self):
-      self.action_size
+      return self.action_size
 
    def save_params(self, filename):
       self.networks.save_params(filename)
