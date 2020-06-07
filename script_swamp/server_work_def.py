@@ -5,7 +5,8 @@ import pymysql
 import sys
 import time
 
-from network import WorkContainer
+#from network import WorkContainer
+from work_container import WorkContainer
 import utils
 
 class ServerWorkDef(object):
@@ -124,8 +125,8 @@ class ServerWorkDef(object):
          next_state_rollouts = []
          for table_name in dynamic_work_params.table_names:
             df = pd.read_sql(
-               "select " + ", ".join(self.query_column_names) + " from " + \
-               "`" + table_name "`",
+               "select " + ", ".join(self.query_column_names) + " from " +
+               "`" + table_name + "`", 
                self.db
             )
             action_rollouts.append(df[self.action_names])

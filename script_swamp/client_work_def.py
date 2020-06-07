@@ -47,7 +47,7 @@ class ClientWorkDef(object):
          print("Couldn't connect to remote SQL database.", str(e))
          sys.exit(-1)
 
-      self.http_handler = SimpleHttpStorage(
+      self.http_handler = utils.SimpleHttpStorage(
          static_work_params.fs_hostname,
          static_work_params.fs_port
       )
