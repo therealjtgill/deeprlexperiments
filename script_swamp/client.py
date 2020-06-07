@@ -7,6 +7,8 @@ import sys
 import tensorflow as tf
 import time
 
+from work_container import WorkContainer
+from pendulum_networks import PendulumNetworks
 from client_work_def import ClientWorkDef
 import utils
 
