@@ -55,7 +55,7 @@ class SimpleHttpStorage(RemoteFileStorage):
 
    def download_file(self, filename, destination=None):
       try:
-         response = urllib.request.urlopen(self.host_url + ":" + filename)
+         response = urllib.request.urlopen(self.host_url + "/" + filename)
          data = response.read()
 
          if destination is None:
