@@ -96,9 +96,9 @@ class ClientWorkDef(object):
          # Load params from the last updated checkpoint and perform the policy
          # rollout against the checkpoint.
          self.work_stuff.load_params(checkpoint_name)
-         ret_dict = self.work_stuff.perform_rollout(
-            dynamic_work_params.work_params.num_rollouts
-         )
+         # Should use dynamic_work_params.work_params.num_rollouts to get data
+         # over many rollouts, but for now I'm not doing that.
+         ret_dict = self.work_stuff.perform_rollout()
 
          # Save output from rollout to the SQL database, order of fields has
          # to match column name order.

@@ -112,7 +112,7 @@ class WorkContainer(object):
 
       actions = np.array(actions)
       states = np.array(states)
-      rewards = np.array(rewards)
+      rewards = np.expand_dims(np.array(rewards), axis=1)
       next_states = np.array(next_states)
 
       ret_dict = {
@@ -122,6 +122,11 @@ class WorkContainer(object):
          "rewards": rewards,
          "next_states": next_states
       }
+      print("states shape from rollout:", states.shape)
+      print("actions shape from rollout:", actions.shape)
+      print("discounted_rewards shape from rollout:", discounted_rewards.shape)
+      print("rewards shape from rollout:", rewards.shape)
+      print("next_states shape from rollout:", next_states.shape)
 
       #return states, actions, discounted_rewards, rewards, next_states
       return ret_dict
@@ -183,7 +188,6 @@ if __name__ == "__main__":
    last_saved_at = 0
    for i in range(600):
       # Collect data
-      #states, actions, rewards = accumulate_data(wc)
       rollout_returns = accumulate_data(wc)
       last_10_average_rewards = np.average(average_rewards[-10:])
 
@@ -227,16 +231,8 @@ if __name__ == "__main__":
       rewards_pro = []
       discounted_rewards_pro = []
       next_states_pro = []
-      #for j in range(len(actions)):
       ret = None
       for j in range(len(rollout_returns)):
-         # ret = prep_sar_data(states[j], actions[j], rewards[j])
-         # states_pro.append(ret[0])
-         # actions_pro.append(ret[1])
-         # discounted_rewards_pro.append(ret[2])
-         # rewards_pro.append(ret[3])
-         # next_states_pro.append(ret[4])
-         
          states_pro.append(rollout_returns[j]["states"])
          actions_pro.append(rollout_returns[j]["actions"])
          discounted_rewards_pro.append(rollout_returns[j]["discounted_rewards"])
