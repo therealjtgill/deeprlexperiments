@@ -105,8 +105,8 @@ class ClientWorkDef(object):
          for i in range(len(ret_dict["states"])):
             field_list = [
                i, # Just let this happen; time field is a counter :'(
-               ret_dict["rewards"][i, 0],
-               ret_dict["discounted_rewards"][i, 0],
+               *ret_dict["rewards"][i],
+               *ret_dict["discounted_rewards"][i],
                *ret_dict["states"][i],
                *ret_dict["actions"][i],
                *ret_dict["next_states"][i]

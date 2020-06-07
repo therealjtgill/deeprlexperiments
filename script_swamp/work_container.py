@@ -112,7 +112,7 @@ class WorkContainer(object):
 
       actions = np.array(actions)
       states = np.array(states)
-      rewards = np.expand_dims(np.array(rewards), axis=1)
+      rewards = np.array(rewards)
       next_states = np.array(next_states)
 
       ret_dict = {
