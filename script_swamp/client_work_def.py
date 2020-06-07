@@ -4,6 +4,11 @@ import pymysql
 import sys
 import time
 import urllib.request
+
+#from network.work_container import WorkContainer
+#from script_swamp import utils
+
+from work_container import WorkContainer
 import utils
 
 class ClientWorkDef(object):

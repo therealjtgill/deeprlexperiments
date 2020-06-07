@@ -4,6 +4,8 @@ import pandas as pd
 import pymysql
 import sys
 import time
+
+from network import WorkContainer
 import utils
 
 class ServerWorkDef(object):

@@ -5,6 +5,7 @@ import numpy as np
 import os
 import tensorflow as tf
 
+#from network.pendulum_networks import PendulumNetworks
 from pendulum_networks import PendulumNetworks
 
 class WorkContainer(object):
