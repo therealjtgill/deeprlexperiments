@@ -23,7 +23,7 @@ class RemoteFileStorage(object):
 class SimpleHttpStorage(RemoteFileStorage):
    def __init__(self, hostname, port, download_dir="."):
       self.hostname = hostname
-      self.port = port
+      self.port = int(port)
       self.host_url = "http://" + str(self.hostname) + ":" + str(self.port)
       self.download_dir = download_dir
 
@@ -55,7 +55,7 @@ class SimpleHttpStorage(RemoteFileStorage):
 
    def download_file(self, filename, destination=None):
       try:
-         response = urllib.request.urlopen(self.host_url + filename)
+         response = urllib.request.urlopen(self.host_url + ":" + filename)
          data = response.read()
 
          if destination is None:
