@@ -62,7 +62,7 @@ class SimpleHttpStorage(RemoteFileStorage):
             destination = self.download_dir
 
          full_filename = os.path.join(destination, filename)
-         with open(full_filename) as outfile:
+         with open(full_filename, "w") as outfile:
             outfile.write(data)
          return True, full_filename
       except Exception as e:
