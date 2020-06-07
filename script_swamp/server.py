@@ -102,7 +102,8 @@ def manager_process(
          if session_manager.attempt_end_session(completed_work):  
             print("\tSuccessfully ended the session", session_manager.current_session.session_uid)
             # If all work is completed give it to trainer for training.
-            session_request = session_manager.session_request()
+            training_table_names = [c.table_name for c in completed_work]
+            session_request = session_manager.session_request(training_table_names)
             print("\t\tPutting in the session request:", session_request)
             trainer_in_queue.put(str(session_request))
             #session_params = session_manager.start_session()
@@ -159,6 +160,7 @@ def trainer_process(
             work_output = current_work.default_work(session_requests[-1])
             print("\tDefault work output: ", work_output)
          else:
+            print("Doing work from session request:", session_requests[-1])
             work_output = current_work.do_work(session_requests[-1])
 
          if work_output is not None:

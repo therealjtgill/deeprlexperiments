@@ -149,8 +149,8 @@ class ServerWorkDef(object):
             self.work_stuff.train_batch(
                state_rollouts[train_index],
                action_rollouts[train_index],
-               discounted_reward_rollouts[train_index],
-               reward_rollouts[train_index],
+               np.expand_dims(discounted_reward_rollouts[train_index], axis=1),
+               np.expand_dims(reward_rollouts[train_index], axis=1),
                next_state_rollouts[train_index]
             )
 
@@ -224,12 +224,13 @@ class SessionManager(object):
       self.available_worker_uids = list(set(self.available_worker_uids))
       print("Current available workers:", self.available_worker_uids)
 
-   def session_request(self):
+   def session_request(self, table_names=[]):
       session_request = utils.to_named_thing(
          {
             "session_uid": self.current_session.session_uid + 1,
             "worker_uids": self.available_worker_uids,
             #"table_names": self.current_session.work_params.new_table_names
+            "table_names": table_names
          }
       )
       return session_request

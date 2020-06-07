@@ -1,5 +1,6 @@
 import mmap
 import numpy as np
+import os
 import pymysql
 import sys
 import time
