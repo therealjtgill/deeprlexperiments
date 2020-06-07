@@ -23,9 +23,9 @@ class ClientWorkDef(object):
             "time",
             "reward",
             "discounted_reward",
-            *["state_" + str(i) for i in range(len(state_size))],
-            *["action_" + str(i) for i in range(len(action_size))],
-            *["next_state_" + str(i) for i in range(len(state_size))],
+            *["state_" + str(i) for i in range(state_size)],
+            *["action_" + str(i) for i in range(action_size)],
+            *["next_state_" + str(i) for i in range(state_size)],
          ]
 
       sql_pass = utils.decrypt_ciphertext(self.config.sql_key_loc)
